@@ -398,8 +398,19 @@ func (c *INGClient) ExecutePayment(targetURL string, payloadBytes []byte, reqID 
 	bodyBytes, _ := io.ReadAll(resp.Body)
 	telemetry.RawBody = string(bodyBytes)
 
+	var p struct {
+		InstructedAmount struct {
+			Amount string `json:"amount"`
+		} `json:"instructedAmount"`
+	}
+	_ = json.Unmarshal(payloadBytes, &p)
+	amt := p.InstructedAmount.Amount
+	if amt == "" {
+		amt = "149.00"
+	}
+
 	// Authentic SCA Simulator link passing the exact paymentID
-	scaURL := fmt.Sprintf("http://localhost:8088/#authorize?payment_id=%s&bank=ing&amount=149.00&merchant=Webshop+B.V.", paymentID)
+	scaURL := fmt.Sprintf("http://localhost:8088/#authorize?payment_id=%s&bank=ing&amount=%s&merchant=Webshop+B.V.", paymentID, amt)
 
 	return telemetry, scaURL, outboundHeaders
 }
@@ -1130,8 +1141,8 @@ func handlePayments(w http.ResponseWriter, r *http.Request) {
 		berlinPayload.CreditorAccount.IBAN = req.CreditorIBAN
 
 		payloadBytes, _ := json.Marshal(berlinPayload)
-		reqID := fmt.Sprintf("req-%d", time.Now().UnixNano())
-		paymentID := fmt.Sprintf("PAY-GO-%s", strings.ToUpper(hex.EncodeToString([]byte(reqID))[:8]))
+		reqID := generateUUID()
+		paymentID := fmt.Sprintf("PAY-GO-%s", strings.ToUpper(strings.ReplaceAll(generateUUID(), "-", "")[:8]))
 
 		var telemetry LiveTelemetry
 		var scaRedirectURL string
