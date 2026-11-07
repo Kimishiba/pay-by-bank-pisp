@@ -774,12 +774,198 @@ func (c *RevolutClient) ExecutePayment(targetURL string, payloadBytes []byte, re
 	return telemetry, scaURL, outboundHeaders
 }
 
+// -------------------------------------------------------------
+// Native Go ABN AMRO mTLS & OAuth2 Token Client
+// -------------------------------------------------------------
+
+type ABNAMROClient struct {
+	client         *http.Client
+	apiKey         string
+	clientID       string
+	cachedToken    string
+	tokenExpiresAt time.Time
+	tokenMutex     sync.Mutex
+}
+
+func NewABNAMROClient() (*ABNAMROClient, error) {
+	certFile := "certs/abnamro/PSD2TPPCertificate.crt"
+	keyFile := "certs/abnamro/PSD2TPPprivateKey.key"
+
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed loading ABN cert/key: %w", err)
+	}
+
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			MinVersion:   tls.VersionTLS12,
+		},
+	}
+
+	httpClient := &http.Client{
+		Transport: transport,
+		Timeout:   12 * time.Second,
+	}
+
+	apiKey := os.Getenv("ABN_AMRO_SANDBOX_API_KEY")
+	if apiKey == "" {
+		apiKey = "6vLYAALAIcixZ9n9eoxuGWNucpGdXlnP"
+	}
+
+	return &ABNAMROClient{
+		client:   httpClient,
+		apiKey:   apiKey,
+		clientID: "TPP_test",
+	}, nil
+}
+
+func (c *ABNAMROClient) GetAccessToken() (string, error) {
+	c.tokenMutex.Lock()
+	defer c.tokenMutex.Unlock()
+
+	if c.cachedToken != "" && time.Now().Before(c.tokenExpiresAt) {
+		return c.cachedToken, nil
+	}
+
+	form := url.Values{}
+	form.Set("grant_type", "client_credentials")
+	form.Set("client_id", c.clientID)
+	form.Set("scope", "psd2:payment:sepa:write")
+
+	req, err := http.NewRequest("POST", "https://auth-mtls-sandbox.abnamro.com/as/token.oauth2", strings.NewReader(form.Encode()))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Cache-Control", "no-cache")
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("ABN oauth request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("ABN oauth failed with status %d: %s", resp.StatusCode, string(b))
+	}
+
+	var tr struct {
+		AccessToken string `json:"access_token"`
+		ExpiresIn   int    `json:"expires_in"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&tr); err != nil {
+		return "", err
+	}
+
+	c.cachedToken = tr.AccessToken
+	expSec := tr.ExpiresIn - 60
+	if expSec < 60 {
+		expSec = 60
+	}
+	c.tokenExpiresAt = time.Now().Add(time.Duration(expSec) * time.Second)
+	return c.cachedToken, nil
+}
+
+func (c *ABNAMROClient) ExecutePayment(targetURL string, payloadBytes []byte, reqID, paymentID string) (LiveTelemetry, string, map[string]string) {
+	u, _ := url.Parse(targetURL)
+	hostname := u.Host
+	tlsInfo := probeTLSAndDNS(hostname)
+
+	start := time.Now()
+	token, tokenErr := c.GetAccessToken()
+
+	outboundHeaders := map[string]string{
+		"Host":                   hostname,
+		"User-Agent":             "CM-PISP-Gateway/Go-1.22",
+		"Content-Type":           "application/json",
+		"Accept":                 "application/json",
+		"API-Key":                c.apiKey,
+		"X-Request-ID":           reqID,
+		"PSU-IP-Address":         "82.161.45.12",
+		"PSU-User-Agent":         "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4)",
+		"TPP-Redirect-Preferred": "true",
+		"TPP-Redirect-URI":       "https://localhost/auth",
+	}
+	if token != "" {
+		outboundHeaders["Authorization"] = "Bearer " + token
+	}
+
+	telemetry := LiveTelemetry{
+		TargetURL:         targetURL,
+		Hostname:          hostname,
+		TLSInfo:           tlsInfo,
+		IsLiveNetworkCall: true,
+		Timestamp:         time.Now().UTC().Format(time.RFC3339),
+		ResponseHeaders:   make(map[string]string),
+	}
+
+	if tokenErr != nil {
+		telemetry.Reason = fmt.Sprintf("OAuth error: %v", tokenErr)
+		scaURL := fmt.Sprintf("http://localhost:8088/#authorize?payment_id=%s&bank=abnamro&amount=100.00", paymentID)
+		return telemetry, scaURL, outboundHeaders
+	}
+
+	req, err := http.NewRequest("POST", targetURL, strings.NewReader(string(payloadBytes)))
+	if err != nil {
+		telemetry.Reason = err.Error()
+		scaURL := fmt.Sprintf("http://localhost:8088/#authorize?payment_id=%s&bank=abnamro&amount=100.00", paymentID)
+		return telemetry, scaURL, outboundHeaders
+	}
+
+	for k, v := range outboundHeaders {
+		req.Header.Set(k, v)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	telemetry.LatencyMS = float64(time.Since(start).Microseconds()) / 1000.0
+
+	if err != nil {
+		telemetry.Reason = err.Error()
+		scaURL := fmt.Sprintf("http://localhost:8088/#authorize?payment_id=%s&bank=abnamro&amount=100.00", paymentID)
+		return telemetry, scaURL, outboundHeaders
+	}
+	defer resp.Body.Close()
+
+	telemetry.StatusCode = resp.StatusCode
+	telemetry.Reason = resp.Status
+
+	for k, v := range resp.Header {
+		if len(v) > 0 {
+			telemetry.ResponseHeaders[k] = v[0]
+		}
+	}
+
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	telemetry.RawBody = string(bodyBytes)
+
+	// Check if ABN returned paymentId
+	var abnResp struct {
+		PaymentID     string `json:"paymentId"`
+		PaymentStatus string `json:"paymentStatus"`
+	}
+	_ = json.Unmarshal(bodyBytes, &abnResp)
+
+	abnTxID := abnResp.PaymentID
+	if abnTxID == "" {
+		abnTxID = paymentID
+	}
+
+	// Official ABN AMRO Consent Application URL
+	scaURL := fmt.Sprintf("https://auth-sandbox.abnamro.com/as/authorization.oauth2?scope=psd2:payment:sepa:write+psd2:payment:sepa:read&client_id=TPP_test&transactionId=%s&response_type=code&flow=code&redirect_uri=https://localhost/auth&state=%s", abnTxID, paymentID)
+
+	return telemetry, scaURL, outboundHeaders
+}
+
 var (
 	paymentsDB     = make(map[string]*PaymentRecord)
 	dbMutex        sync.RWMutex
 	globalING      *INGClient
 	globalRabobank *RabobankClient
 	globalRevolut  *RevolutClient
+	globalABNAMRO  *ABNAMROClient
 )
 
 func probeTLSAndDNS(hostname string) TLSInfo {
@@ -996,6 +1182,29 @@ func handlePayments(w http.ResponseWriter, r *http.Request) {
 			revoBytes, _ := json.Marshal(revoPayload)
 			payloadBytes = revoBytes
 			telemetry, scaRedirectURL, outboundHeaders = globalRevolut.ExecutePayment(targetURL, revoBytes, reqID, paymentID)
+		} else if bankID == "abnamro" && globalABNAMRO != nil {
+			creditorIBAN := req.CreditorIBAN
+			if creditorIBAN == "" || creditorIBAN == "NL99CMCO0123456789" {
+				creditorIBAN = "NL12ABNA9999876523"
+			}
+			abnPayload := map[string]interface{}{
+				"debtorAccount": map[string]string{
+					"iban": "NL62ABNA9999841479",
+				},
+				"creditorName":                      berlinPayload.CreditorName,
+				"creditorAccount": map[string]string{
+					"iban": creditorIBAN,
+				},
+				"instructedAmount": map[string]interface{}{
+					"currency": req.Currency,
+					"amount":   fmt.Sprintf("%.2f", req.Amount),
+				},
+				"requestedExecutionDate":            time.Now().Add(24 * time.Hour).Format("2006-01-02"),
+				"remittanceInformationUnstructured": req.Description,
+			}
+			abnBytes, _ := json.Marshal(abnPayload)
+			payloadBytes = abnBytes
+			telemetry, scaRedirectURL, outboundHeaders = globalABNAMRO.ExecutePayment(targetURL, abnBytes, reqID, paymentID)
 		} else {
 			hasher := sha256.New()
 			hasher.Write(payloadBytes)
@@ -1175,6 +1384,13 @@ func main() {
 		log.Printf("⚠️ Revolut mTLS client init warning: %v (running in simulation/fallback mode)", err)
 	} else {
 		log.Printf("🔒 Revolut mTLS client & FAPI 1.0 token engine loaded successfully with certs/revolut")
+	}
+
+	globalABNAMRO, err = NewABNAMROClient()
+	if err != nil {
+		log.Printf("⚠️ ABN AMRO mTLS client init warning: %v (running in simulation/fallback mode)", err)
+	} else {
+		log.Printf("🔒 ABN AMRO mTLS client & OAuth2 token engine loaded successfully with certs/abnamro")
 	}
 
 	mux := http.NewServeMux()
