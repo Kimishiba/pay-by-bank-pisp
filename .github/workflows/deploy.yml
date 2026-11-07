@@ -44,7 +44,7 @@ jobs:
         run: |
           ssh -p ${{ secrets.UNRAID_SSH_PORT || '48222' }} -o StrictHostKeyChecking=no \
             root@${{ secrets.UNRAID_HOST || 'homeassistantkrooswijkhof.duckdns.org' }} \
-            "cd /mnt/user/appdata/pay-by-bank/app && docker compose up -d --build"
+            "cd /mnt/user/appdata/pay-by-bank/app && docker compose up -d --build --remove-orphans"
 
       - name: Verify Container Health
         run: |

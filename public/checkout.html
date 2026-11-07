@@ -1,0 +1,1899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Secure Checkout — Bloom &amp; Co</title>
+<!--
+  CM.com PSP — Hosted Checkout Page with Pay by Bank (PISP / A2A)
+  ================================================================
+  All styling is driven by CSS variables in the :root block below.
+  Merchants can override these via the Back Office to fully restyle
+  the page without touching markup. Drop in a new logo + background
+  via --merchant-logo and --merchant-background and the layout adapts.
+  
+  Compliant with WCAG 2.1 AA accessibility standards and high-converting
+  Pay by Bank UI requirements (DNB Licensed PISP - CM Payments B.V.).
+-->
+<script>
+  /* Apply the merchant theme published from the back office.
+     Runs synchronously in <head> before any layout to avoid a FOUC.
+     Storage key is shared with backoffice.html. */
+  (function applyMerchantTheme() {
+    try {
+      var raw = localStorage.getItem('cm-checkout-theme');
+      if (!raw) return;
+      var t = JSON.parse(raw);
+      if (t && t.cssVars) {
+        Object.keys(t.cssVars).forEach(function (k) {
+          document.documentElement.style.setProperty(k, t.cssVars[k]);
+        });
+      }
+      if (t && t.merchantBg) {
+        document.documentElement.style.setProperty(
+          '--merchant-background', 'url("' + t.merchantBg + '")');
+      }
+      if (t && t.customCss) {
+        var s = document.createElement('style');
+        s.id = 'merchant-custom-css';
+        s.textContent = t.customCss;
+        document.addEventListener('DOMContentLoaded', function () {
+          document.head.appendChild(s);
+        });
+        if (document.head) document.head.appendChild(s);
+      }
+      if (t && t.merchantLogo) {
+        var swapLogo = function () {
+          var box = document.querySelector('.merchant-logo');
+          if (!box) return;
+          box.innerHTML = '<img src="' + t.merchantLogo + '" alt="Merchant logo" ' +
+            'style="height:100%;width:auto;display:block;object-fit:contain;">';
+        };
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', swapLogo);
+        } else {
+          swapLogo();
+        }
+      }
+    } catch (e) { /* swallow — fall back to default theme */ }
+  })();
+</script>
+<style>
+  /* ============================================================
+     MERCHANT-CONFIGURABLE TOKENS
+     These are written by the back office. Everything else cascades
+     from these. Override these to re-skin the entire page.
+     ============================================================ */
+  :root {
+    /* Brand palette — generated from merchant logo by back office */
+    --brand-primary:      #2B6E62;
+    --brand-primary-hover:#1F5249;
+    --brand-secondary:    #E8B86D;
+    --brand-accent:       #F4E4D1;
+    --brand-on-primary:   #FFFFFF;
+
+    /* Surfaces & text */
+    --surface-card:       #FFFFFF;
+    --surface-muted:      #F7F5F1;
+    --border-subtle:      #E5E1DA;
+    --border-strong:      #CCD0D6;
+    --text-primary:       #1A1A1A;
+    --text-secondary:     #5B5B5B;
+    --text-muted:         #8A8A8A;
+
+    /* Status */
+    --success:            #00875A;
+    --success-light:      #E3FCEF;
+    --danger:             #C0392B;
+    --warning:            #FF8B00;
+
+    /* Merchant assets — replaced via back office */
+    --merchant-background: url('https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=2000&q=80');
+    --background-overlay: rgba(20, 30, 28, 0.55);
+
+    /* Typography */
+    --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --font-body:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --font-mono:    'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+    /* Geometry */
+    --radius-card:   20px;
+    --radius-input:  12px;
+    --radius-method: 14px;
+    --shadow-card:   0 24px 60px -20px rgba(0,0,0,0.35), 0 8px 16px -8px rgba(0,0,0,0.15);
+  }
+
+  /* ============================================================
+     RESET & PAGE
+     ============================================================ */
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    font-family: var(--font-body);
+    color: var(--text-primary);
+    background: var(--merchant-background) center/cover no-repeat fixed;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.5;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background: var(--background-overlay);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ============================================================
+     LAYOUT
+     ============================================================ */
+  .page {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 32px 20px 48px;
+  }
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1080px;
+    width: 100%;
+    margin: 0 auto 28px;
+    color: #FFFFFF;
+  }
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #FFFFFF;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.18);
+    transition: background 0.2s ease, transform 0.2s ease;
+    cursor: pointer;
+  }
+  .back-link:hover { background: rgba(255,255,255,0.22); transform: translateX(-2px); }
+  .back-link svg { width: 16px; height: 16px; }
+
+  .secure-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.92);
+  }
+  .secure-badge svg { width: 16px; height: 16px; }
+
+  .checkout-shell {
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+    background: var(--surface-card);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  /* ============================================================
+     MERCHANT HEADER
+     ============================================================ */
+  .merchant-header {
+    padding: 30px 32px 22px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-subtle);
+    background: linear-gradient(180deg, var(--brand-accent) 0%, var(--surface-card) 100%);
+  }
+  .merchant-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 52px;
+    margin-bottom: 10px;
+  }
+  .merchant-logo svg { height: 100%; width: auto; }
+  .merchant-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin: 0;
+  }
+
+  /* ============================================================
+     ORDER SUMMARY
+     ============================================================ */
+  .order-summary {
+    padding: 20px 32px;
+    background: var(--surface-muted);
+  }
+  .order-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+  }
+  .order-meta strong {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .order-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px dashed var(--border-subtle);
+  }
+  .order-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13.5px;
+    color: var(--text-secondary);
+  }
+  .order-line span:last-child {
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+  .order-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .order-total .label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+  .order-total .amount {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .order-total .currency {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-right: 4px;
+  }
+
+  /* ============================================================
+     PAYMENT METHODS VIEW
+     ============================================================ */
+  .payment-section {
+    padding: 26px 32px 32px;
+  }
+  .payment-heading {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 4px;
+  }
+  .payment-subheading {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0 0 18px;
+  }
+
+  .payment-methods {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .pm {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: var(--surface-card);
+    border: 1.5px solid var(--border-subtle);
+    border-radius: var(--radius-method);
+    cursor: pointer;
+    transition: border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+    width: 100%;
+    font-family: inherit;
+    text-align: left;
+    min-height: 58px;
+  }
+  .pm:hover {
+    border-color: var(--brand-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px -8px rgba(0,0,0,0.15);
+  }
+  .pm:focus-visible {
+    outline: none;
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-primary) 22%, transparent);
+  }
+  .pm-icon {
+    width: 44px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 6px;
+    background: #FAFAFA;
+    border: 1px solid var(--border-subtle);
+    overflow: hidden;
+  }
+  .pm-icon svg { max-width: 100%; max-height: 100%; }
+  .pm-body { flex: 1; min-width: 0; }
+  .pm-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+  }
+  .pm-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 2px 0 0;
+  }
+  .pm-arrow {
+    color: var(--text-muted);
+    transition: transform 0.2s ease, color 0.2s ease;
+    flex-shrink: 0;
+  }
+  .pm:hover .pm-arrow { transform: translateX(3px); color: var(--brand-primary); }
+
+  /* Recommended method gets brand accent */
+  .pm.recommended {
+    border-color: var(--brand-primary);
+    background: color-mix(in srgb, var(--brand-primary) 4%, var(--surface-card));
+    position: relative;
+  }
+  .badge-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .badge-tag.rec {
+    background: var(--brand-primary);
+    color: var(--brand-on-primary);
+  }
+  .badge-tag.instant {
+    background: #EBF8FF;
+    color: #0070BA;
+    border: 1px solid #BAE3FF;
+  }
+  .badge-tag.used {
+    background: #FEF3C7;
+    color: #92400E;
+    border: 1px solid #FDE68A;
+  }
+
+  /* ============================================================
+     PAY BY BANK ENGINE & MULTI-STATE CONTAINER
+     ============================================================ */
+  .pbb-section {
+    padding: 24px 32px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    animation: fadeIn 0.25s ease-out;
+  }
+
+  /* Navigation Header inside PBB */
+  .pbb-nav-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .pbb-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--brand-primary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 6px 0;
+    border-radius: 4px;
+    transition: color 0.15s ease;
+  }
+  .pbb-back-btn:hover { color: var(--brand-primary-hover); text-decoration: underline; }
+  .pbb-back-btn svg { width: 14px; height: 14px; }
+
+  .pbb-dnb-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--surface-muted);
+    border: 1px solid var(--border-subtle);
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+
+  /* Stepper Progress Bar */
+  .pbb-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    padding: 0 4px;
+    margin-bottom: 4px;
+  }
+  .pbb-stepper::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 20px;
+    right: 20px;
+    height: 2px;
+    background: var(--border-subtle);
+    z-index: 0;
+    transform: translateY(-50%);
+  }
+  .pbb-step-item {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface-card);
+    padding: 0 6px;
+  }
+  .pbb-step-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--surface-muted);
+    border: 2px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    transition: all 0.25s ease;
+  }
+  .pbb-step-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .pbb-step-item.active .pbb-step-dot {
+    background: var(--brand-primary);
+    border-color: var(--brand-primary);
+    color: var(--brand-on-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 20%, transparent);
+  }
+  .pbb-step-item.active .pbb-step-label {
+    color: var(--brand-primary);
+    font-weight: 700;
+  }
+  .pbb-step-item.completed .pbb-step-dot {
+    background: var(--success);
+    border-color: var(--success);
+    color: #FFFFFF;
+  }
+  .pbb-step-item.completed .pbb-step-label {
+    color: var(--success);
+  }
+
+  /* Consumer Trust Reassurance Box */
+  .pbb-guarantee-box {
+    background: color-mix(in srgb, var(--brand-primary) 5%, #FFFFFF);
+    border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, #E5E1DA);
+    border-radius: var(--radius-input);
+    padding: 12px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    line-height: 1.45;
+  }
+  .pbb-guarantee-icon {
+    width: 22px;
+    height: 22px;
+    color: var(--brand-primary);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .pbb-guarantee-box strong {
+    color: var(--text-primary);
+  }
+
+  /* Tier A: Preferred / Recent Bank Card */
+  .pbb-preferred-block {
+    background: #FFFBEB;
+    border: 1.5px solid #FCD34D;
+    border-radius: var(--radius-method);
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .pbb-preferred-block:hover {
+    border-color: #F59E0B;
+    background: #FEF3C7;
+    transform: translateY(-1px);
+  }
+  .pbb-pref-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .pbb-pref-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #92400E;
+    margin: 0;
+  }
+  .pbb-pref-sub {
+    font-size: 11.5px;
+    color: #B45309;
+    margin: 0;
+  }
+
+  /* Tier C: Search & Filter Tools */
+  .pbb-search-wrapper {
+    position: relative;
+    width: 100%;
+  }
+  .pbb-search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+  }
+  .pbb-search-input {
+    width: 100%;
+    padding: 12px 14px 12px 40px;
+    border: 1.5px solid var(--border-subtle);
+    border-radius: var(--radius-input);
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--text-primary);
+    background: var(--surface-card);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .pbb-search-input:focus {
+    outline: none;
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 18%, transparent);
+  }
+  .pbb-search-input::placeholder { color: var(--text-muted); }
+
+  /* Country Filter Tabs */
+  .pbb-country-tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  .pbb-tab-btn {
+    border: 1px solid var(--border-subtle);
+    background: var(--surface-muted);
+    color: var(--text-secondary);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+  .pbb-tab-btn:hover { background: #EAE6DF; }
+  .pbb-tab-btn.active {
+    background: var(--brand-primary);
+    color: var(--brand-on-primary);
+    border-color: var(--brand-primary);
+  }
+
+  /* Tier B: Bank Quick-Select Grid */
+  .pbb-bank-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+  .pbb-bank-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border-subtle);
+    border-radius: var(--radius-method);
+    background: var(--surface-card);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+    min-height: 60px;
+    position: relative;
+    font-family: inherit;
+  }
+  .pbb-bank-card:hover {
+    border-color: var(--brand-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -4px rgba(0,0,0,0.1);
+  }
+  .pbb-bank-card:focus-visible {
+    outline: none;
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 22%, transparent);
+  }
+  .pbb-bank-card.selected {
+    border-color: var(--brand-primary);
+    background: color-mix(in srgb, var(--brand-primary) 7%, var(--surface-card));
+    box-shadow: 0 0 0 1px var(--brand-primary);
+  }
+  .pbb-bank-logo {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: #FAFAFA;
+    border: 1px solid var(--border-subtle);
+    overflow: hidden;
+  }
+  .pbb-bank-logo svg { width: 100%; height: 100%; }
+  .pbb-bank-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .pbb-bank-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pbb-bank-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin: 1px 0 0;
+  }
+  .pbb-check-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--brand-primary);
+    color: #FFFFFF;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+  }
+  .pbb-bank-card.selected .pbb-check-badge {
+    display: flex;
+  }
+
+  /* Empty Search State */
+  .pbb-empty-state {
+    padding: 24px 16px;
+    text-align: center;
+    background: var(--surface-muted);
+    border: 1px dashed var(--border-subtle);
+    border-radius: var(--radius-input);
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  /* Primary Action CTA */
+  .pbb-primary-cta {
+    width: 100%;
+    padding: 15px 20px;
+    background: var(--brand-primary);
+    color: var(--brand-on-primary);
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    border-radius: var(--radius-input);
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease, opacity 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 52px;
+  }
+  .pbb-primary-cta:hover:not(:disabled) {
+    background: var(--brand-primary-hover);
+    transform: translateY(-1px);
+  }
+  .pbb-primary-cta:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* ============================================================
+     STATE 2: SCA HANDOFF SCREEN (QR CODE & APP LINK)
+     ============================================================ */
+  .pbb-handoff-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+  }
+  .pbb-qr-card {
+    background: #FFFFFF;
+    padding: 16px;
+    border-radius: 16px;
+    border: 2px solid var(--border-subtle);
+    box-shadow: 0 10px 25px -10px rgba(0,0,0,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 200px;
+    height: 200px;
+    margin: 4px auto;
+  }
+  .pbb-qr-card svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .pbb-radar-pulse {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--brand-primary);
+    background: color-mix(in srgb, var(--brand-primary) 8%, #FFFFFF);
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--brand-primary) 20%, transparent);
+  }
+  .pbb-dot-pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--brand-primary);
+    animation: blink 1.4s infinite ease-in-out;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(0.7); }
+  }
+
+  .pbb-sandbox-card {
+    background: #111827;
+    color: #F9FAFB;
+    border-radius: var(--radius-input);
+    padding: 14px 16px;
+    width: 100%;
+    text-align: left;
+    box-shadow: 0 8px 20px -6px rgba(0,0,0,0.25);
+  }
+  .pbb-sandbox-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 700;
+    color: #9CA3AF;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+  .pbb-sim-btn {
+    background: #10B981;
+    color: #064E3B;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    width: 100%;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .pbb-sim-btn:hover {
+    background: #34D399;
+    transform: translateY(-1px);
+  }
+
+  /* ============================================================
+     STATE 4: SETTLEMENT CONFIRMED / SUCCESS RECEIPT
+     ============================================================ */
+  .pbb-success-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+    animation: fadeIn 0.3s ease-out;
+  }
+  .pbb-check-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #E3FCEF;
+    border: 2px solid #57D9A3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #00875A;
+  }
+  .pbb-check-circle svg { width: 34px; height: 34px; }
+  .pbb-receipt-card {
+    width: 100%;
+    background: var(--surface-muted);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-input);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-align: left;
+    font-size: 13px;
+  }
+  .pbb-receipt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .pbb-receipt-row .label { color: var(--text-muted); }
+  .pbb-receipt-row .value {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+
+  /* ============================================================
+     FOOTER
+     ============================================================ */
+  .checkout-footer {
+    padding: 16px 32px 24px;
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 11.5px;
+    color: var(--text-muted);
+    text-align: center;
+  }
+  .checkout-footer .brand-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .checkout-footer svg { width: 14px; height: 14px; }
+  .checkout-footer .cm-mark {
+    font-weight: 700;
+    color: var(--text-secondary);
+    letter-spacing: 0.02em;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ============================================================
+     RESPONSIVE
+     ============================================================ */
+  @media (max-width: 560px) {
+    .page { padding: 16px 12px 28px; }
+    .top-bar { margin-bottom: 16px; }
+    .secure-badge .label { display: none; }
+    .merchant-header { padding: 24px 20px 18px; }
+    .order-summary, .payment-section, .pbb-section { padding-left: 20px; padding-right: 20px; }
+    .checkout-footer { padding-left: 20px; padding-right: 20px; }
+    .order-total .amount { font-size: 24px; }
+    .pbb-bank-grid { grid-template-columns: 1fr; }
+  }
+</style>
+<!-- Load pure JS QR Code generator locally -->
+<script src="qrcode.min.js"></script>
+</head>
+<body>
+<div class="page">
+
+  <!-- ============ TOP BAR ============ -->
+  <header class="top-bar">
+    <a class="back-link" id="global-back-link" href="#cart" aria-label="Go back to shopping cart">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+      <span id="global-back-text">Back to cart</span>
+    </a>
+    <span class="secure-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      <span class="label">Secure checkout</span>
+    </span>
+  </header>
+
+  <!-- ============ CHECKOUT CARD SHELL ============ -->
+  <main class="checkout-shell" role="main" aria-labelledby="merchant-name">
+    
+    <!-- Merchant Header (Logo + Brand Name) -->
+    <section class="merchant-header">
+      <div class="merchant-logo" aria-hidden="true">
+        <!-- Default sample merchant logo: Bloom & Co Florists -->
+        <svg viewBox="0 0 200 56" xmlns="http://www.w3.org/2000/svg">
+          <g fill="var(--brand-primary)">
+            <path d="M28 8c5 0 9 2 11 6-3-1-6-1-9 0 1 3 3 5 6 6-3 2-7 2-10 0-1 4 0 8 3 11-5 0-9-3-11-7-2 4-1 9 2 12-5-1-9-5-10-10-3 3-5 7-4 12-3-4-3-9-1-13-4 1-8 4-9 9-1-5 1-11 5-14-4-1-9 0-12 4 2-5 7-9 13-9-3-3-7-4-12-3 4-4 10-5 15-3-1-4-4-7-8-8 5-1 11 1 14 5 0-5 3-9 8-11-1 5 1 10 5 12 2-5 6-8 11-9-2 4-2 9 0 13z"/>
+          </g>
+          <text x="62" y="36" font-family="Georgia, serif" font-size="24" font-weight="700" fill="var(--text-primary)" letter-spacing="-0.5">Bloom &amp; Co</text>
+        </svg>
+      </div>
+      <h1 class="merchant-name" id="merchant-name">Bloom &amp; Co · Florists</h1>
+    </section>
+
+    <!-- Order Summary -->
+    <section class="order-summary" aria-label="Order summary">
+      <div class="order-meta">
+        <span>Order <strong>#BC-208451</strong></span>
+        <span>20 May 2026</span>
+      </div>
+      <div class="order-lines">
+        <div class="order-line"><span>Spring Bouquet · Medium</span><span>€ 34.50</span></div>
+        <div class="order-line"><span>Ceramic vase · Sand</span><span>€ 19.95</span></div>
+        <div class="order-line"><span>Same-day delivery</span><span>€ 7.50</span></div>
+      </div>
+      <div class="order-total">
+        <span class="label">Total to pay</span>
+        <span><span class="currency">€</span><span class="amount" id="checkout-amount-display">61.95</span></span>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         VIEW 0: MAIN PAYMENT METHODS LIST
+         ============================================================ -->
+    <section class="payment-section" id="section-payment-methods" aria-label="Choose a payment method">
+      <h2 class="payment-heading">Choose how to pay</h2>
+      <p class="payment-subheading">Select your preferred payment method. Pay by Bank provides instant, fee-free transfer.</p>
+
+      <div class="payment-methods" role="list">
+
+        <!-- ⭐ PAY BY BANK (Direct Bank Transfer via CM Payments PISP) -->
+        <button class="pm recommended" id="pm-pay-by-bank" role="listitem" type="button" aria-label="Pay with Pay by Bank - Direct Account-to-Account Instant Transfer">
+          <span class="pm-icon" style="background:#FFF7ED; border-color:#FED7AA;">
+            <!-- Bank wire vector icon -->
+            <svg viewBox="0 0 44 30" xmlns="http://www.w3.org/2000/svg">
+              <rect width="44" height="30" rx="3" fill="#EA580C"/>
+              <path d="M22 6L9 12V14H35V12L22 6Z" fill="#FFFFFF"/>
+              <rect x="12" y="15" width="3" height="7" fill="#FFFFFF"/>
+              <rect x="18" y="15" width="3" height="7" fill="#FFFFFF"/>
+              <rect x="24" y="15" width="3" height="7" fill="#FFFFFF"/>
+              <rect x="30" y="15" width="3" height="7" fill="#FFFFFF"/>
+              <rect x="9" y="23" width="26" height="2" fill="#FFFFFF"/>
+            </svg>
+          </span>
+          <span class="pm-body">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              <p class="pm-name">Pay by Bank</p>
+              <span class="badge-tag instant">Instant A2A</span>
+              <span class="badge-tag rec">Recommended</span>
+            </div>
+            <p class="pm-desc">Direct bank transfer • No card surcharges • 100% encrypted</p>
+          </span>
+          <svg class="pm-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+
+        <!-- iDEAL | WERO -->
+        <button class="pm" role="listitem" type="button" aria-label="Pay with iDEAL or WERO" onclick="alert('Demo: Click Pay by Bank above to experience the direct bank checkout flow.')">
+          <span class="pm-icon">
+            <svg viewBox="0 0 44 30" xmlns="http://www.w3.org/2000/svg">
+              <rect width="44" height="30" rx="3" fill="#FFFFFF"/>
+              <text x="11" y="14" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" font-weight="700" fill="#CC0066">i</text>
+              <text x="11" y="23" text-anchor="middle" font-family="Arial, sans-serif" font-size="6" font-weight="700" fill="#0A0B09">DEAL</text>
+              <line x1="22" y1="6" x2="22" y2="24" stroke="#E0E0E0" stroke-width="1"/>
+              <rect x="24" y="9" width="16" height="12" rx="2" fill="#5B2D8C"/>
+              <text x="32" y="18" text-anchor="middle" font-family="Arial, sans-serif" font-size="6.5" font-weight="800" fill="#FFFFFF" letter-spacing="0.3">wero</text>
+            </svg>
+          </span>
+          <span class="pm-body">
+            <p class="pm-name">iDEAL | WERO</p>
+            <p class="pm-desc">Pay directly from your European bank account</p>
+          </span>
+          <svg class="pm-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+
+        <!-- Credit Card -->
+        <button class="pm" role="listitem" type="button" aria-label="Pay with credit card" onclick="alert('Demo: Click Pay by Bank above to experience the direct bank checkout flow.')">
+          <span class="pm-icon">
+            <svg viewBox="0 0 44 30" xmlns="http://www.w3.org/2000/svg">
+              <rect width="44" height="30" rx="3" fill="#1A1F71"/>
+              <circle cx="18" cy="15" r="6" fill="#EB001B" opacity="0.95"/>
+              <circle cx="26" cy="15" r="6" fill="#F79E1B" opacity="0.95"/>
+            </svg>
+          </span>
+          <span class="pm-body">
+            <p class="pm-name">Credit or debit card</p>
+            <p class="pm-desc">Visa, Mastercard, American Express</p>
+          </span>
+          <svg class="pm-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+
+        <!-- PayPal -->
+        <button class="pm" role="listitem" type="button" aria-label="Pay with PayPal" onclick="alert('Demo: Click Pay by Bank above to experience the direct bank checkout flow.')">
+          <span class="pm-icon">
+            <svg viewBox="0 0 44 30" xmlns="http://www.w3.org/2000/svg">
+              <rect width="44" height="30" rx="3" fill="#FFFFFF"/>
+              <text x="22" y="19" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="800" fill="#003087">Pay<tspan fill="#009CDE">Pal</tspan></text>
+            </svg>
+          </span>
+          <span class="pm-body">
+            <p class="pm-name">PayPal</p>
+            <p class="pm-desc">Pay with your PayPal balance or linked card</p>
+          </span>
+          <svg class="pm-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+
+        <!-- Bancontact -->
+        <button class="pm" role="listitem" type="button" aria-label="Pay with Bancontact" onclick="alert('Demo: Click Pay by Bank above to experience the direct bank checkout flow.')">
+          <span class="pm-icon">
+            <svg viewBox="0 0 44 30" xmlns="http://www.w3.org/2000/svg">
+              <rect width="44" height="30" rx="3" fill="#FFFFFF"/>
+              <rect x="6" y="9" width="14" height="12" rx="2" fill="#005498"/>
+              <rect x="24" y="9" width="14" height="12" rx="2" fill="#FFD800"/>
+            </svg>
+          </span>
+          <span class="pm-body">
+            <p class="pm-name">Bancontact</p>
+            <p class="pm-desc">Belgium's most-used payment method</p>
+          </span>
+          <svg class="pm-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+
+        <!-- Apple Pay -->
+        <button class="pm" role="listitem" type="button" aria-label="Pay with Apple Pay" onclick="alert('Demo: Click Pay by Bank above to experience the direct bank checkout flow.')">
+          <span class="pm-icon">
+            <svg viewBox="0 0 44 30" xmlns="http://www.w3.org/2000/svg">
+              <rect width="44" height="30" rx="3" fill="#000000"/>
+              <text x="22" y="19" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="9" font-weight="600" fill="#FFFFFF">&#xF8FF; Pay</text>
+            </svg>
+          </span>
+          <span class="pm-body">
+            <p class="pm-name">Apple Pay</p>
+            <p class="pm-desc">Pay quickly with Touch ID or Face ID</p>
+          </span>
+          <svg class="pm-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PAY BY BANK FLOW (PISP ENGINE)
+         ============================================================ -->
+    <section class="pbb-section" id="section-pay-by-bank" style="display:none;" aria-label="Pay by Bank - Direct Account-to-Account Transfer">
+      
+      <!-- Top Navigation & Regulatory Pill -->
+      <div class="pbb-nav-header">
+        <button type="button" class="pbb-back-btn" id="pbb-back-btn" aria-label="Return to payment methods selection">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+          <span>All payment methods</span>
+        </button>
+        <span class="pbb-dnb-pill">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          DNB Supervised (R129862)
+        </span>
+      </div>
+
+      <!-- Stepper Indicator -->
+      <div class="pbb-stepper" aria-label="Payment progress">
+        <div class="pbb-step-item active" id="step-node-1">
+          <div class="pbb-step-dot">1</div>
+          <span class="pbb-step-label">Select Bank</span>
+        </div>
+        <div class="pbb-step-item" id="step-node-2">
+          <div class="pbb-step-dot">2</div>
+          <span class="pbb-step-label">Approve</span>
+        </div>
+        <div class="pbb-step-item" id="step-node-3">
+          <div class="pbb-step-dot">3</div>
+          <span class="pbb-step-label">Settled</span>
+        </div>
+      </div>
+
+      <!-- Consumer Trust Reassurance Banner -->
+      <div class="pbb-guarantee-box">
+        <svg class="pbb-guarantee-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+        </svg>
+        <div>
+          <strong>Direct transfer from your bank account.</strong>
+          <div>Zero card surcharges. 100% encrypted via PSD2 open banking rails. We never see or store your credentials.</div>
+        </div>
+      </div>
+
+      <!-- ------------------------------------------------------------
+           SUB-STATE 1: BANK SELECTION & SEARCH
+           ------------------------------------------------------------ -->
+      <div id="pbb-view-select" style="display:flex; flex-direction:column; gap:14px;">
+        
+        <!-- Tier A: Preferred / Recently Used Bank -->
+        <div id="pbb-tier-a-container" style="display:none;"></div>
+
+        <!-- Tier C: Search & Filter Tools -->
+        <div class="pbb-search-wrapper">
+          <svg class="pbb-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <input type="search" class="pbb-search-input" id="pbb-search-input" placeholder="Search bank name or BIC (e.g. ING, Rabo, bunq)..." aria-label="Search bank name or BIC" autocomplete="off">
+        </div>
+
+        <!-- Country Filter Tabs -->
+        <div class="pbb-country-tabs" role="tablist" aria-label="Filter banks by country">
+          <button type="button" class="pbb-tab-btn active" data-country="all" role="tab" aria-selected="true">All Banks</button>
+          <button type="button" class="pbb-tab-btn" data-country="NL" role="tab" aria-selected="false">Netherlands (NL)</button>
+          <button type="button" class="pbb-tab-btn" data-country="EU" role="tab" aria-selected="false">Pan-European</button>
+        </div>
+
+        <!-- Tier B: Bank Quick-Select Grid -->
+        <div class="pbb-bank-grid" id="pbb-bank-grid" role="radiogroup" aria-label="Choose your bank">
+          <!-- Populated dynamically via JS with accessible radio items -->
+        </div>
+
+        <!-- Empty search results notice -->
+        <div class="pbb-empty-state" id="pbb-empty-state" style="display:none;" role="status">
+          <strong>No matching bank found.</strong>
+          <p style="margin:4px 0 0;">Check your spelling or search by Bank Identifier Code (BIC).</p>
+        </div>
+
+        <!-- Continue CTA Button -->
+        <button type="button" class="pbb-primary-cta" id="pbb-btn-continue" disabled aria-live="polite">
+          <span>Select your bank to continue</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+        </button>
+
+      </div>
+
+      <!-- ------------------------------------------------------------
+           SUB-STATE 2: STRONG CUSTOMER AUTHENTICATION (SCA) HANDOFF
+           ------------------------------------------------------------ -->
+      <div id="pbb-view-handoff" style="display:none;" class="pbb-handoff-box" role="region" aria-label="Bank Authentication">
+        
+        <div style="text-align:center;">
+          <h2 style="font-size:18px; font-weight:700; color:var(--text-primary); margin:0;" id="handoff-bank-title">Authorize with ING Bank</h2>
+          <p style="font-size:13px; color:var(--text-muted); margin:4px 0 0;">Confirm the payment of <strong>€ 61.95</strong> to Bloom &amp; Co</p>
+        </div>
+
+        <!-- Live Listener Status Indicator -->
+        <div class="pbb-radar-pulse" role="status" aria-live="polite">
+          <span class="pbb-dot-pulse"></span>
+          <span id="pbb-polling-status-text">Waiting for bank approval...</span>
+        </div>
+
+        <!-- Desktop QR Code Panel -->
+        <div id="pbb-desktop-panel" style="width:100%;">
+          <div class="pbb-qr-card" id="pbb-qr-container">
+            <!-- QR Code SVG injected dynamically -->
+          </div>
+          <p style="font-size:12.5px; color:var(--text-secondary); margin:8px 0 12px;">
+            Scan with your phone camera or banking app to approve with Face ID / Fingerprint.
+          </p>
+          <a href="#" id="pbb-web-banking-link" target="_blank" class="pbb-back-btn" style="display:inline-flex; justify-content:center; width:100%; font-size:13px;">
+            Open online banking portal in new tab ↗
+          </a>
+        </div>
+
+        <!-- Mobile App Direct Deep Link Panel -->
+        <div id="pbb-mobile-panel" style="display:none; width:100%;">
+          <a href="#" id="pbb-app-deep-link" class="pbb-primary-cta" style="text-decoration:none;">
+            <span>Open Banking App to Authorize</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+          </a>
+          <p style="font-size:11.5px; color:var(--text-muted); margin-top:8px;">
+            If inside Instagram or TikTok, tap <strong>···</strong> and select "Open in Browser".
+          </p>
+        </div>
+
+        <!-- Interactive Sandbox Test Simulator -->
+        <div class="pbb-sandbox-card">
+          <div class="pbb-sandbox-header">
+            <span>⚡ PISP Gateway Sandbox Simulator</span>
+            <span style="color:#34D399;">Ready</span>
+          </div>
+          <p style="font-size:12px; color:#D1D5DB; margin:0 0 10px;">
+            Simulate the user approving the transfer in their banking app to verify immediate settlement telemetry.
+          </p>
+          <button type="button" class="pbb-sim-btn" id="pbb-btn-simulate-auth">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Simulate Bank App Approval (SCA Success)
+          </button>
+        </div>
+
+        <!-- Cancel / Change Bank -->
+        <button type="button" class="pbb-back-btn" id="pbb-btn-change-bank" style="margin-top:6px;">
+          ← Cancel or select a different bank
+        </button>
+
+      </div>
+
+      <!-- ------------------------------------------------------------
+           SUB-STATE 3: SETTLEMENT CONFIRMED & SUCCESS RECEIPT
+           ------------------------------------------------------------ -->
+      <div id="pbb-view-success" style="display:none;" class="pbb-success-box" role="region" aria-label="Payment Confirmed">
+        <div class="pbb-check-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+
+        <div>
+          <h2 style="font-size:20px; font-weight:800; color:var(--text-primary); margin:0;">Payment Settled!</h2>
+          <p style="font-size:13.5px; color:var(--text-secondary); margin:4px 0 0;">
+            Direct bank transfer of <strong style="color:var(--text-primary)">€ 61.95</strong> completed via SEPA Instant.
+          </p>
+        </div>
+
+        <div class="pbb-receipt-card">
+          <div class="pbb-receipt-row">
+            <span class="label">Merchant</span>
+            <span class="value" style="font-family:var(--font-body); font-weight:700;">Bloom &amp; Co · Florists</span>
+          </div>
+          <div class="pbb-receipt-row">
+            <span class="label">Order Ref</span>
+            <span class="value" id="receipt-order-ref">#BC-208451</span>
+          </div>
+          <div class="pbb-receipt-row">
+            <span class="label">Payment ID</span>
+            <span class="value" id="receipt-payment-id">PAY-GO-7265712D</span>
+          </div>
+          <div class="pbb-receipt-row">
+            <span class="label">Clearing Ref</span>
+            <span class="value" id="receipt-clearing-ref">SCT-INST-GO-2026</span>
+          </div>
+          <div class="pbb-receipt-row">
+            <span class="label">Settlement Rail</span>
+            <span class="value" style="color:var(--success);">SEPA Instant (TIPS / RT1)</span>
+          </div>
+          <div class="pbb-receipt-row">
+            <span class="label">Timestamp</span>
+            <span class="value" id="receipt-timestamp">Just now</span>
+          </div>
+        </div>
+
+        <p style="font-size:12px; color:var(--text-muted); margin:0;" id="pbb-redirect-countdown-text">
+          Redirecting to merchant store in <strong id="pbb-countdown-num">5</strong>s...
+        </p>
+
+        <button type="button" class="pbb-primary-cta" id="pbb-btn-return-merchant">
+          Return to Bloom &amp; Co Now →
+        </button>
+      </div>
+
+    </section>
+
+    <!-- Footer -->
+    <footer class="checkout-footer">
+      <div class="brand-line">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        <span>Secured by <span class="cm-mark">CM.com Payments</span> · Licensed Institution</span>
+      </div>
+      <div>Supervised by De Nederlandsche Bank (DNB Relation: R129862) · PSD2 Compliant</div>
+    </footer>
+  </main>
+
+  <!-- Helper link to styling back office -->
+  <p style="text-align:center; margin: 24px auto 0; color: rgba(255,255,255,0.75); font-size: 12px; max-width: 520px;">
+    Merchant view? <a href="backoffice.html" style="color:#fff; text-decoration: underline;">Open the styling back office →</a>
+  </p>
+</div>
+
+<!-- ============================================================
+     APPLICATION LOGIC: DIRECT BANK SELECTION & PISP GATEWAY
+     ============================================================ -->
+<script>
+(function() {
+  'use strict';
+
+  // Bank Directory with official vector logos and metadata
+  const BANK_CATALOG = [
+    {
+      id: 'ing',
+      name: 'ING Bank',
+      bic: 'INGBNL2A',
+      country: 'NL',
+      popular: true,
+      sub: 'Instant Transfer Supported',
+      keywords: ['ing', 'lion', 'oranje', 'ingbnl2a'],
+      logoSvg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="40" height="40" rx="8" fill="#FF6200"/>
+        <path d="M29 25c-1-3-3-5-6-6 3-1 6-4 6-7 0-4-3-6-8-6H12v22h6v-6h4c3 0 5 1 6 3h1z" fill="#FFFFFF"/>
+        <circle cx="27" cy="13" r="3" fill="#000066"/>
+      </svg>`
+    },
+    {
+      id: 'rabobank',
+      name: 'Rabobank',
+      bic: 'RABONL2U',
+      country: 'NL',
+      popular: true,
+      sub: 'Instant Transfer Supported',
+      keywords: ['rabobank', 'rabo', 'rabonl2u'],
+      logoSvg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="40" height="40" rx="8" fill="#000066"/>
+        <circle cx="20" cy="20" r="12" fill="#FF6600"/>
+        <path d="M20 11a9 9 0 100 18 9 9 0 000-18zm-2 5a2 2 0 114 0 2 2 0 01-4 0zm5 9h-6v-2h2v-4h-1v-2h3v6h2v2z" fill="#FFFFFF"/>
+      </svg>`
+    },
+    {
+      id: 'abnamro',
+      name: 'ABN AMRO',
+      bic: 'ABNANL2A',
+      country: 'NL',
+      popular: true,
+      sub: 'Instant Transfer Supported',
+      keywords: ['abnamro', 'abn', 'amro', 'abnanl2a'],
+      logoSvg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="40" height="40" rx="8" fill="#00845F"/>
+        <polygon points="12,12 28,12 20,28" fill="#FFD200"/>
+        <polygon points="20,12 28,12 24,20" fill="#005A40"/>
+      </svg>`
+    },
+    {
+      id: 'volksbank',
+      name: 'De Volksbank',
+      bic: 'SNSBNL2A',
+      country: 'NL',
+      popular: true,
+      sub: 'SNS • ASN • RegioBank',
+      keywords: ['volksbank', 'sns', 'asn', 'regiobank', 'snsbnl2a'],
+      logoSvg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="40" height="40" rx="8" fill="#E11A27"/>
+        <rect x="8" y="8" width="11" height="11" fill="#FFFFFF"/>
+        <rect x="21" y="8" width="11" height="11" fill="#1C355E"/>
+        <rect x="8" y="21" width="11" height="11" fill="#1C355E"/>
+        <rect x="21" y="21" width="11" height="11" fill="#FFFFFF"/>
+      </svg>`
+    },
+    {
+      id: 'bunq',
+      name: 'bunq',
+      bic: 'BUNQNL2A',
+      country: 'NL',
+      popular: false,
+      sub: 'Real-Time Mobile Bank',
+      keywords: ['bunq', 'rainbow', 'bunqnl2a'],
+      logoSvg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="40" height="40" rx="8" fill="#111827"/>
+        <circle cx="20" cy="20" r="11" stroke="#00C48C" stroke-width="3"/>
+        <circle cx="20" cy="20" r="7" stroke="#FF5A5F" stroke-width="2.5"/>
+        <circle cx="20" cy="20" r="3" fill="#0099FF"/>
+      </svg>`
+    },
+    {
+      id: 'revolut',
+      name: 'Revolut',
+      bic: 'REVONL21',
+      country: 'EU',
+      popular: false,
+      sub: 'SEPA Instant Supported',
+      keywords: ['revolut', 'revonl21', 'pan-eu'],
+      logoSvg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="40" height="40" rx="8" fill="#000000"/>
+        <path d="M14 11h7c3 0 5 1.5 5 4s-2 4-5 4h-3v8h-4V11zm4 5h3c1 0 2-.5 2-1.5s-1-1.5-2-1.5h-3v3zm4 5l5 6h-4l-4-5 3-1z" fill="#FFFFFF"/>
+      </svg>`
+    },
+    {
+      id: 'knab',
+      name: 'Knab',
+      bic: 'KNABNL2H',
+      country: 'NL',
+      popular: false,
+      sub: 'Instant Transfer Supported',
+      keywords: ['knab', 'knabnl2h'],
+      logoSvg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="40" height="40" rx="8" fill="#FA4616"/>
+        <text x="20" y="26" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="900" fill="#FFFFFF">k.</text>
+      </svg>`
+    },
+    {
+      id: 'triodos',
+      name: 'Triodos Bank',
+      bic: 'TRIONL2U',
+      country: 'EU',
+      popular: false,
+      sub: 'Ethical Banking',
+      keywords: ['triodos', 'trionl2u'],
+      logoSvg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="40" height="40" rx="8" fill="#003B46"/>
+        <circle cx="20" cy="20" r="10" stroke="#00A896" stroke-width="3"/>
+        <path d="M20 14v12M14 20h12" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>`
+    }
+  ];
+
+  // DOM Elements
+  const sectionMethods = document.getElementById('section-payment-methods');
+  const sectionPBB = document.getElementById('section-pay-by-bank');
+  const btnPBBMethod = document.getElementById('pm-pay-by-bank');
+  const btnBackMethods = document.getElementById('pbb-back-btn');
+  const globalBackLink = document.getElementById('global-back-link');
+  const globalBackText = document.getElementById('global-back-text');
+
+  // PBB Sub-Views
+  const viewSelect = document.getElementById('pbb-view-select');
+  const viewHandoff = document.getElementById('pbb-view-handoff');
+  const viewSuccess = document.getElementById('pbb-view-success');
+
+  // Stepper Nodes
+  const stepNode1 = document.getElementById('step-node-1');
+  const stepNode2 = document.getElementById('step-node-2');
+  const stepNode3 = document.getElementById('step-node-3');
+
+  // PBB Controls
+  const bankGrid = document.getElementById('pbb-bank-grid');
+  const searchInput = document.getElementById('pbb-search-input');
+  const emptyState = document.getElementById('pbb-empty-state');
+  const btnContinue = document.getElementById('pbb-btn-continue');
+  const tierAContainer = document.getElementById('pbb-tier-a-container');
+  const countryTabs = document.querySelectorAll('.pbb-tab-btn');
+
+  // Handoff Controls
+  const handoffTitle = document.getElementById('handoff-bank-title');
+  const qrContainer = document.getElementById('pbb-qr-container');
+  const webBankingLink = document.getElementById('pbb-web-banking-link');
+  const appDeepLink = document.getElementById('pbb-app-deep-link');
+  const desktopPanel = document.getElementById('pbb-desktop-panel');
+  const mobilePanel = document.getElementById('pbb-mobile-panel');
+  const btnSimulateAuth = document.getElementById('pbb-btn-simulate-auth');
+  const btnChangeBank = document.getElementById('pbb-btn-change-bank');
+  const pollingStatusText = document.getElementById('pbb-polling-status-text');
+
+  // Success Controls
+  const receiptOrderRef = document.getElementById('receipt-order-ref');
+  const receiptPaymentId = document.getElementById('receipt-payment-id');
+  const receiptClearingRef = document.getElementById('receipt-clearing-ref');
+  const receiptTimestamp = document.getElementById('receipt-timestamp');
+  const countdownNum = document.getElementById('pbb-countdown-num');
+  const btnReturnMerchant = document.getElementById('pbb-btn-return-merchant');
+
+  // State Management
+  let selectedBank = null;
+  let activeCountry = 'all';
+  let activePaymentRecord = null;
+  let pollingInterval = null;
+  let redirectCountdownInterval = null;
+
+  const ORDER_AMOUNT = 61.95;
+  const ORDER_REF = 'BC-208451';
+  const API_BASE = window.location.origin.includes('8088') ? '' : 'http://localhost:8088';
+
+  // -------------------------------------------------------------
+  // Navigation Transitions
+  // -------------------------------------------------------------
+  function showPaymentMethods() {
+    sectionPBB.style.display = 'none';
+    sectionMethods.style.display = 'block';
+    globalBackText.textContent = 'Back to cart';
+    globalBackLink.onclick = null;
+    history.replaceState(null, '', window.location.pathname);
+    stopPolling();
+  }
+
+  function showPayByBankFlow() {
+    sectionMethods.style.display = 'none';
+    sectionPBB.style.display = 'flex';
+    globalBackText.textContent = 'Payment methods';
+    globalBackLink.onclick = function(e) {
+      e.preventDefault();
+      showPaymentMethods();
+    };
+    setStepper(1);
+    showSubView('select');
+    renderPreferredBank();
+    renderBanks();
+  }
+
+  function showSubView(state) {
+    viewSelect.style.display = (state === 'select') ? 'flex' : 'none';
+    viewHandoff.style.display = (state === 'handoff') ? 'flex' : 'none';
+    viewSuccess.style.display = (state === 'success') ? 'flex' : 'none';
+  }
+
+  function setStepper(step) {
+    stepNode1.className = 'pbb-step-item' + (step === 1 ? ' active' : (step > 1 ? ' completed' : ''));
+    stepNode2.className = 'pbb-step-item' + (step === 2 ? ' active' : (step > 2 ? ' completed' : ''));
+    stepNode3.className = 'pbb-step-item' + (step === 3 ? ' active completed' : '');
+  }
+
+  // -------------------------------------------------------------
+  // Tier A: Preferred Bank Memory (localStorage)
+  // -------------------------------------------------------------
+  function renderPreferredBank() {
+    try {
+      const preferredId = localStorage.getItem('cm_pisp_preferred_bank');
+      if (!preferredId) {
+        tierAContainer.style.display = 'none';
+        return;
+      }
+      const bank = BANK_CATALOG.find(b => b.id === preferredId);
+      if (!bank) {
+        tierAContainer.style.display = 'none';
+        return;
+      }
+
+      tierAContainer.innerHTML = `
+        <div class="pbb-preferred-block" id="pbb-preferred-card" role="button" tabindex="0" aria-label="Use preferred bank: ${bank.name}">
+          <div class="pbb-pref-left">
+            <div class="pbb-bank-logo">${bank.logoSvg}</div>
+            <div>
+              <p class="pbb-pref-title">${bank.name}</p>
+              <p class="pbb-pref-sub">Your preferred banking app</p>
+            </div>
+          </div>
+          <span class="badge-tag used">Recently Used</span>
+        </div>
+      `;
+      tierAContainer.style.display = 'block';
+
+      const prefCard = document.getElementById('pbb-preferred-card');
+      prefCard.addEventListener('click', () => {
+        selectBank(bank.id);
+      });
+      prefCard.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          selectBank(bank.id);
+        }
+      });
+    } catch (e) {
+      tierAContainer.style.display = 'none';
+    }
+  }
+
+  // -------------------------------------------------------------
+  // Tier B & C: Bank Search & Grid
+  // -------------------------------------------------------------
+  function renderBanks() {
+    const query = (searchInput.value || '').trim().toLowerCase();
+    
+    const filtered = BANK_CATALOG.filter(bank => {
+      // Country check
+      if (activeCountry !== 'all' && bank.country !== activeCountry) {
+        return false;
+      }
+      // Query check
+      if (!query) return true;
+      if (bank.name.toLowerCase().includes(query)) return true;
+      if (bank.bic.toLowerCase().includes(query)) return true;
+      return bank.keywords.some(k => k.includes(query));
+    });
+
+    bankGrid.innerHTML = '';
+    if (filtered.length === 0) {
+      emptyState.style.display = 'block';
+    } else {
+      emptyState.style.display = 'none';
+      filtered.forEach(bank => {
+        const isSelected = selectedBank && selectedBank.id === bank.id;
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'pbb-bank-card' + (isSelected ? ' selected' : '');
+        card.setAttribute('role', 'radio');
+        card.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+        card.setAttribute('aria-label', `${bank.name}, ${bank.sub}`);
+        card.dataset.bankId = bank.id;
+
+        card.innerHTML = `
+          <div class="pbb-bank-logo">${bank.logoSvg}</div>
+          <div class="pbb-bank-info">
+            <p class="pbb-bank-name">${bank.name}</p>
+            <p class="pbb-bank-sub">${bank.sub}</p>
+          </div>
+          <div class="pbb-check-badge">✓</div>
+        `;
+
+        card.addEventListener('click', () => selectBank(bank.id));
+        bankGrid.appendChild(card);
+      });
+    }
+
+    updateContinueButton();
+  }
+
+  function selectBank(bankId) {
+    selectedBank = BANK_CATALOG.find(b => b.id === bankId) || null;
+    
+    // Persist preference
+    try {
+      if (selectedBank) {
+        localStorage.setItem('cm_pisp_preferred_bank', selectedBank.id);
+      }
+    } catch (e) {}
+
+    // Update UI selection
+    const cards = bankGrid.querySelectorAll('.pbb-bank-card');
+    cards.forEach(card => {
+      const match = card.dataset.bankId === bankId;
+      card.classList.toggle('selected', match);
+      card.setAttribute('aria-checked', match ? 'true' : 'false');
+    });
+
+    updateContinueButton();
+  }
+
+  function updateContinueButton() {
+    if (selectedBank) {
+      btnContinue.disabled = false;
+      btnContinue.querySelector('span').textContent = `Continue with ${selectedBank.name}`;
+    } else {
+      btnContinue.disabled = true;
+      btnContinue.querySelector('span').textContent = 'Select your bank to continue';
+    }
+  }
+
+  // -------------------------------------------------------------
+  // State 2: Initiate Payment & SCA Handoff
+  // -------------------------------------------------------------
+  async function initiatePayment() {
+    if (!selectedBank) return;
+
+    btnContinue.disabled = true;
+    btnContinue.querySelector('span').textContent = 'Initiating with bank...';
+
+    const payload = {
+      bank_id: selectedBank.id,
+      amount: ORDER_AMOUNT,
+      currency: 'EUR',
+      merchant_reference: ORDER_REF,
+      creditor_iban: 'NL91ABNA0417164300',
+      description: `Bloom & Co - Order #${ORDER_REF}`
+    };
+
+    try {
+      const resp = await fetch(`${API_BASE}/api/v1/payments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      activePaymentRecord = data;
+    } catch (err) {
+      console.warn('Backend offline or CORS blocked, using direct client simulation:', err);
+      activePaymentRecord = {
+        payment_id: 'PAY-GO-' + Math.random().toString(36).substr(2, 8).toUpperCase(),
+        status: 'RCVD',
+        bank_id: selectedBank.id,
+        amount: ORDER_AMOUNT,
+        merchant_reference: ORDER_REF,
+        sca_redirect_url: `http://localhost:8088/#authorize?payment_id=SIM-${Date.now()}&bank=${selectedBank.id}&amount=${ORDER_AMOUNT}`
+      };
+    }
+
+    renderHandoff();
+  }
+
+  function renderHandoff() {
+    setStepper(2);
+    showSubView('handoff');
+    handoffTitle.textContent = `Authorize with ${selectedBank.name}`;
+
+    const redirectUrl = activePaymentRecord.sca_redirect_url || `https://${selectedBank.id}.bank.nl/auth?ref=${activePaymentRecord.payment_id}`;
+    webBankingLink.href = redirectUrl;
+    appDeepLink.href = redirectUrl;
+
+    // Detect Mobile vs Desktop
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 640;
+    if (isMobile) {
+      mobilePanel.style.display = 'block';
+    } else {
+      mobilePanel.style.display = 'none';
+    }
+    desktopPanel.style.display = 'block';
+
+    // Generate Crisp Vector QR Code Client-side
+    renderQrCode(redirectUrl);
+
+    // Start live polling
+    startPolling(activePaymentRecord.payment_id);
+  }
+
+  function renderQrCode(url) {
+    qrContainer.innerHTML = '';
+    try {
+      if (typeof qrcode === 'function') {
+        const qr = qrcode(0, 'M');
+        qr.addData(url);
+        qr.make();
+        qrContainer.innerHTML = qr.createSvgTag({ scalable: true });
+        return;
+      }
+    } catch (e) {
+      console.warn('QR code generator error:', e);
+    }
+    // High-contrast SVG fallback illustration if qrcode not ready
+    qrContainer.innerHTML = `
+      <svg viewBox="0 0 100 100" width="100%" height="100%">
+        <rect width="100" height="100" fill="#FFFFFF"/>
+        <rect x="10" y="10" width="30" height="30" fill="#000000"/>
+        <rect x="15" y="15" width="20" height="20" fill="#FFFFFF"/>
+        <rect x="20" y="20" width="10" height="10" fill="#000000"/>
+        <rect x="60" y="10" width="30" height="30" fill="#000000"/>
+        <rect x="65" y="15" width="20" height="20" fill="#FFFFFF"/>
+        <rect x="70" y="20" width="10" height="10" fill="#000000"/>
+        <rect x="10" y="60" width="30" height="30" fill="#000000"/>
+        <rect x="15" y="65" width="20" height="20" fill="#FFFFFF"/>
+        <rect x="20" y="70" width="10" height="10" fill="#000000"/>
+        <rect x="50" y="50" width="10" height="10" fill="#000000"/>
+        <rect x="70" y="70" width="15" height="15" fill="#000000"/>
+      </svg>
+    `;
+  }
+
+  // -------------------------------------------------------------
+  // State 3: Polling & Status Feedback
+  // -------------------------------------------------------------
+  function startPolling(paymentId) {
+    stopPolling();
+    pollingInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/payments/${paymentId}`);
+        if (!res.ok) return;
+        const rec = await res.json();
+        if (rec.status === 'ACSC_SETTLED' || rec.status === 'ACCP' || rec.authorized_at) {
+          stopPolling();
+          renderSuccess(rec);
+        }
+      } catch (e) {}
+    }, 2000);
+  }
+
+  function stopPolling() {
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      pollingInterval = null;
+    }
+  }
+
+  // Simulator CTA click
+  async function simulateBankApproval() {
+    btnSimulateAuth.disabled = true;
+    btnSimulateAuth.textContent = '⚡ Settling with Bank...';
+
+    if (activePaymentRecord && activePaymentRecord.payment_id) {
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/payments/${activePaymentRecord.payment_id}/authorize`, {
+          method: 'POST'
+        });
+        if (res.ok) {
+          const settled = await res.json();
+          stopPolling();
+          renderSuccess(settled);
+          return;
+        }
+      } catch (e) {}
+    }
+
+    // Direct fallback simulation
+    setTimeout(() => {
+      stopPolling();
+      renderSuccess({
+        payment_id: activePaymentRecord ? activePaymentRecord.payment_id : 'PAY-GO-7265712D',
+        clearing_reference: `SCT-INST-GO-${Date.now()}`,
+        status: 'ACSC_SETTLED',
+        settlement_rail: 'SEPA Instant Credit Transfer (SCT Inst / TIPS)'
+      });
+    }, 600);
+  }
+
+  // -------------------------------------------------------------
+  // State 4: Confirmation & Success Screen
+  // -------------------------------------------------------------
+  function renderSuccess(record) {
+    setStepper(3);
+    showSubView('success');
+
+    receiptOrderRef.textContent = `#${ORDER_REF}`;
+    receiptPaymentId.textContent = record.payment_id || 'PAY-GO-7265712D';
+    receiptClearingRef.textContent = record.clearing_reference || `SCT-INST-GO-${Date.now()}`;
+    receiptTimestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    // Auto-redirect countdown
+    let seconds = 5;
+    countdownNum.textContent = seconds;
+    if (redirectCountdownInterval) clearInterval(redirectCountdownInterval);
+    redirectCountdownInterval = setInterval(() => {
+      seconds -= 1;
+      if (seconds <= 0) {
+        clearInterval(redirectCountdownInterval);
+        alert(`Order #${ORDER_REF} paid successfully! Redirecting back to Bloom & Co confirmation.`);
+        showPaymentMethods();
+      } else {
+        countdownNum.textContent = seconds;
+      }
+    }, 1000);
+  }
+
+  // -------------------------------------------------------------
+  // Event Listeners & Bootstrapping
+  // -------------------------------------------------------------
+  btnPBBMethod.addEventListener('click', showPayByBankFlow);
+  btnBackMethods.addEventListener('click', showPaymentMethods);
+  btnChangeBank.addEventListener('click', () => {
+    stopPolling();
+    setStepper(1);
+    showSubView('select');
+  });
+
+  searchInput.addEventListener('input', () => {
+    renderBanks();
+  });
+
+  countryTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      countryTabs.forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+      });
+      tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
+      activeCountry = tab.dataset.country;
+      renderBanks();
+    });
+  });
+
+  btnContinue.addEventListener('click', initiatePayment);
+  btnSimulateAuth.addEventListener('click', simulateBankApproval);
+  btnReturnMerchant.addEventListener('click', () => {
+    if (redirectCountdownInterval) clearInterval(redirectCountdownInterval);
+    alert(`Order #${ORDER_REF} completed. Returning to merchant.`);
+    showPaymentMethods();
+  });
+
+  // Check URL query parameter or hash on load
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('method') === 'pay-by-bank' || window.location.hash.includes('pay-by-bank')) {
+    showPayByBankFlow();
+  }
+
+})();
+</script>
+</body>
+</html>
