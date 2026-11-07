@@ -80,12 +80,12 @@ var BankEndpoints = map[string]BankConfig{
 	"revolut": {
 		Name:          "Revolut Bank",
 		BIC:           "REVONL21",
-		SandboxURL:    "https://sandbox-oba.revolut.com/pis/payment-setups",
-		ProdURL:       "https://oba.revolut.com/pis/payment-setups",
-		Hostname:      "sandbox-oba.revolut.com",
-		Scheme:        "Revolut Open Banking PSD2 / eIDAS mTLS",
+		SandboxURL:    "https://sandbox-oba-auth.revolut.com/open-banking/v3.1/pisp/domestic-payment-consents",
+		ProdURL:       "https://oba-auth.revolut.com/open-banking/v3.1/pisp/domestic-payment-consents",
+		Hostname:      "sandbox-oba-auth.revolut.com",
+		Scheme:        "UK Open Banking v3.1 / FAPI 1.0 Advanced mTLS",
 		AppName:       "Revolut App",
-		ExpectedProof: "Cloudflare/Google Cloud API Gateway with Request-ID and mTLS challenge",
+		ExpectedProof: "Revolut NGINX / Cloudflare Gateway with x-fapi-financial-id & x-jws-signature",
 	},
 }
 
