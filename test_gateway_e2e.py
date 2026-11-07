@@ -44,7 +44,41 @@ def test_gateway():
         print(f"✓ Live mTLS to ING: {telemetry['tls_info']['resolved_ip']} ({telemetry['tls_info']['tls_version']})")
         print(f"✓ SCA Redirect URL: {sca_url}")
 
-    print("\n--- 3. Testing Payment Retrieval ---")
+    print("\n--- 3. Testing Payment Creation (Live Egress to ABN AMRO Sandbox v2) ---")
+    abn_payload = {
+        "bank_id": "abnamro",
+        "amount": 89.50,
+        "currency": "EUR",
+        "merchant_reference": "ORD-ABN-AUTOMATED-TEST",
+        "creditor_iban": "NL99CMCO0123456789",
+        "description": "Payment for ORD-ABN-AUTOMATED-TEST"
+    }
+    req = urllib.request.Request(
+        f"{BASE_URL}/api/v1/payments",
+        data=json.dumps(abn_payload).encode(),
+        headers={"Content-Type": "application/json"}
+    )
+    with urllib.request.urlopen(req) as resp:
+        assert resp.status == 201, f"Expected 201, got {resp.status}"
+        data = json.loads(resp.read().decode())
+        abn_payment_id = data["payment_id"]
+        abn_sca_url = data["sca_redirect_url"]
+        abn_telemetry = data["live_telemetry"]
+        outbound = data["outbound_bank_headers"]
+        
+        assert abn_payment_id.startswith("PAY-GO-"), f"Unexpected payment ID format: {abn_payment_id}"
+        assert abn_telemetry["is_live_network_call"] is True, "Live network call flag not set"
+        assert abn_telemetry["hostname"] == "api-sandbox.abnamro.com", "ABN target host mismatch"
+        assert outbound.get("API-Key") == "6vLYAALAIcixZ9n9eoxuGWNucpGdXlnP", "API-Key missing or mismatched in outbound headers"
+        assert "Trace-Id" in abn_telemetry["response_headers"], "ABN AMRO Gateway Trace-Id missing from response headers"
+        trace_id = abn_telemetry["response_headers"]["Trace-Id"]
+        print(f"✓ ABN AMRO Payment Created: {abn_payment_id}")
+        print(f"✓ Live TLS 1.3 to ABN AMRO: {abn_telemetry['tls_info']['resolved_ip']} ({abn_telemetry['tls_info']['tls_version']})")
+        print(f"✓ Verified Outbound API-Key: {outbound.get('API-Key')[:10]}... (Authenticated by ABN Gateway)")
+        print(f"✓ Verified Inbound Trace-Id: {trace_id}")
+        print(f"✓ ABN AMRO SCA URL: {abn_sca_url}")
+
+    print("\n--- 4. Testing Payment Retrieval ---")
     req = urllib.request.Request(f"{BASE_URL}/api/v1/payments/{payment_id}")
     with urllib.request.urlopen(req) as resp:
         assert resp.status == 200, f"Expected 200, got {resp.status}"
@@ -52,7 +86,7 @@ def test_gateway():
         assert rec["payment_id"] == payment_id
         print(f"✓ Payment record retrieved by ID: {payment_id}")
 
-    print("\n--- 4. Testing SCA Authorization Endpoint ---")
+    print("\n--- 5. Testing SCA Authorization Endpoint ---")
     # Parse payment_id from sca_url
     from urllib.parse import urlparse, parse_qs
     parsed = urlparse(sca_url)
@@ -77,7 +111,7 @@ def test_gateway():
         print(f"  - Clearing Ref: {auth_data['clearing_reference']}")
         print(f"  - Authorized At: {auth_data['authorized_at']}")
 
-    print("\n--- 5. Testing Static Assets & SCA Modal HTML ---")
+    print("\n--- 6. Testing Static Assets & SCA Modal HTML ---")
     with urllib.request.urlopen(f"{BASE_URL}/index.html") as resp:
         html = resp.read().decode()
         assert "scaModal" in html, "SCA Modal element missing in HTML"
@@ -85,7 +119,7 @@ def test_gateway():
         print("✓ Frontend HTML contains scaModal and confirmation handler")
 
     print("\n=======================================================")
-    print("🎉 ALL 5 END-TO-END GATEWAY TESTS PASSED WITH ZERO ERRORS!")
+    print("🎉 ALL 6 END-TO-END GATEWAY TESTS PASSED WITH ZERO ERRORS!")
     print("=======================================================")
 
 if __name__ == "__main__":

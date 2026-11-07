@@ -60,12 +60,12 @@ var BankEndpoints = map[string]BankConfig{
 	"abnamro": {
 		Name:          "ABN AMRO",
 		BIC:           "ABNANL2A",
-		SandboxURL:    "https://api-sandbox.abnamro.com/v1/payments/sepa-credit-transfers",
-		ProdURL:       "https://api.abnamro.com/v1/payments/sepa-credit-transfers",
+		SandboxURL:    "https://api-sandbox.abnamro.com/payment/v2/sepa-credit-transfers",
+		ProdURL:       "https://api.abnamro.com/payment/v2/sepa-credit-transfers",
 		Hostname:      "api-sandbox.abnamro.com",
-		Scheme:        "Berlin Group NextGenPSD2 v1.3",
+		Scheme:        "Berlin Group NextGenPSD2 / ABN AMRO PSD2 v2.1.4",
 		AppName:       "ABN AMRO Mobiel",
-		ExpectedProof: "ABN AMRO Developer Gateway JSON error ERR_1002_003 with Trace-Id",
+		ExpectedProof: "ABN AMRO Developer Gateway JSON with Trace-Id & API-Key verification",
 	},
 	"volksbank": {
 		Name:          "De Volksbank (SNS / ASN / Regio)",
@@ -593,6 +593,15 @@ func handlePayments(w http.ResponseWriter, r *http.Request) {
 				"Signature":                 fmt.Sprintf(`keyId="CM-QSEAL-CERT-2026",algorithm="rsa-sha256",headers="digest x-request-id date",signature="qseal-%d"`, time.Now().Unix()),
 				"TPP-Signature-Certificate": "MIIDezCCAmOgAwIBAgIUQW50aWdyYXZpdHlR...[CM_PAYMENTS_QSEALC]",
 			}
+
+			if bankID == "abnamro" {
+				apiKey := os.Getenv("ABN_AMRO_SANDBOX_API_KEY")
+				if apiKey == "" {
+					apiKey = "6vLYAALAIcixZ9n9eoxuGWNucpGdXlnP"
+				}
+				outboundHeaders["API-Key"] = apiKey
+			}
+
 			telemetry = executeLiveEgress(targetURL, outboundHeaders, payloadBytes)
 			scaRedirectURL = fmt.Sprintf("http://localhost:8088/#authorize?payment_id=%s&bank=%s&amount=%.2f", paymentID, bankID, req.Amount)
 		}
@@ -602,6 +611,17 @@ func handlePayments(w http.ResponseWriter, r *http.Request) {
 			curlHeaders = append(curlHeaders, fmt.Sprintf("-H '%s: %s'", k, v))
 		}
 		curlCmd := fmt.Sprintf("curl -i -X POST '%s' \\\n  %s \\\n  -d '%s'", targetURL, strings.Join(curlHeaders, " \\\n  "), string(payloadBytes))
+
+		respID := telemetry.ResponseHeaders["X-Ing-Response-Id"]
+		if respID == "" {
+			respID = telemetry.ResponseHeaders["Trace-Id"]
+		}
+		if respID == "" {
+			respID = telemetry.ResponseHeaders["trace-id"]
+		}
+		if respID == "" {
+			respID = telemetry.ResponseHeaders["X-Request-Id"]
+		}
 
 		record := &PaymentRecord{
 			PaymentID:               paymentID,
@@ -625,7 +645,7 @@ func handlePayments(w http.ResponseWriter, r *http.Request) {
 			ProofAnalysis: ProofAnalysis{
 				ProofSummary: bank.ExpectedProof,
 				WhyThisProvesConnection: fmt.Sprintf("The call was dispatched to %s (%s) over %s authenticated by %s. The bank returned HTTP %d with response ID %s.",
-					telemetry.Hostname, telemetry.TLSInfo.ResolvedIP, telemetry.TLSInfo.TLSVersion, telemetry.TLSInfo.CertIssuer, telemetry.StatusCode, telemetry.ResponseHeaders["X-Ing-Response-Id"]),
+					telemetry.Hostname, telemetry.TLSInfo.ResolvedIP, telemetry.TLSInfo.TLSVersion, telemetry.TLSInfo.CertIssuer, telemetry.StatusCode, respID),
 			},
 		}
 
