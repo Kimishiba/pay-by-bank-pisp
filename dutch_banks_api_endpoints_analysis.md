@@ -13,7 +13,7 @@
 In the Netherlands, retail banking is heavily consolidated. Three major banking entities—**ING Bank**, **Rabobank**, and **De Volksbank** (alongside ABN AMRO)—account for the vast majority of consumer transaction accounts.
 
 To establish direct, intermediary-free Payment Initiation Services (PIS) under the PSD2 Regulatory Technical Standards (RTS) and Berlin Group NextGenPSD2 frameworks:
-* **Regulatory Prerequisites:** CM Payments B.V. operates with its PSD2 Payment Institution (PI) license registered with **De Nederlandsche Bank (DNB)** for Payment Initiation Services (Annex I, Service 7).
+* **Regulatory Prerequisites:** CM Payments B.V. is a DNB-registered Payment Institution authorized for Services 3 and 5 only. Payment Initiation Services (Annex I, Service 7) require a scope extension that has **not yet been granted** (see `psd2_pisp_regulatory_analysis.md`).
 * **Cryptographic Credentials:** Qualified Trust Service Provider (QTSP) certificates:
   * **eIDAS QWAC (Qualified Website Authentication Certificate):** Mutual TLS (mTLS) client authentication at the network transport layer.
   * **eIDAS QSealC (Qualified Electronic Seal Certificate):** Application-layer digital signing of HTTP request bodies and headers to guarantee non-repudiation and integrity.

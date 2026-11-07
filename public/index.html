@@ -514,9 +514,94 @@ curl -i -X POST 'https://api.sandbox.ing.com/v2/payments/sepa-credit-transfers' 
 
   </div>
 
+  <!-- Interactive Customer SCA Simulator Modal -->
+  <div id="scaModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.75); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+    <div style="background: #ffffff; border: 3px solid #000000; box-shadow: 6px 6px 0px #000000; max-width: 440px; width: 100%; padding: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000000; padding-bottom: 12px; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="background: #ff5f1f; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 900; font-size: 14px;">🦁</div>
+          <span style="font-family: 'Anybody'; font-weight: 900; font-size: 16px; text-transform: uppercase;">ING Mobiel Bankieren</span>
+        </div>
+        <span style="font-family: 'JetBrains Mono'; font-size: 10px; font-weight: 800; background: #ffe600; padding: 2px 6px; border: 1px solid #000000;">SCA SIMULATOR</span>
+      </div>
+
+      <div style="text-align: center; margin: 16px 0;">
+        <div style="font-family: 'JetBrains Mono'; font-size: 12px; color: #555555; text-transform: uppercase;">Payment Initiation Request</div>
+        <div style="font-family: 'Anybody'; font-size: 36px; font-weight: 900; margin: 6px 0;" id="scaAmountDisplay">€ 149.00</div>
+        <div style="font-family: 'Hanken Grotesk'; font-size: 14px; font-weight: 600;">To: <span id="scaMerchantDisplay">Webshop B.V.</span></div>
+        <div style="font-family: 'JetBrains Mono'; font-size: 11px; color: #666666; margin-top: 4px;">Via PISP: CM Payments B.V. (DNB: R129862)</div>
+      </div>
+
+      <div style="background: #f7f7f7; border: 1.5px solid #000000; padding: 12px; margin-bottom: 20px; font-family: 'JetBrains Mono'; font-size: 11px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+          <span>DEBTOR IBAN:</span>
+          <strong>NL88INGB0009876543</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+          <span>RAIL:</span>
+          <strong style="color: #008844;">SEPA INSTANT (SCT INST)</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span>SCA SECURITY:</span>
+          <strong>PSD2 2-FACTOR BIOMETRIC</strong>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <button class="raw-btn" style="background: #00d66c; width: 100%;" onclick="confirmSCAAuthorization()">
+          <span>✓ APPROVE WITH FACE ID / PIN</span>
+        </button>
+        <button class="raw-btn raw-btn-white" style="width: 100%;" onclick="closeSCAModal()">
+          <span>✕ CANCEL PAYMENT</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     let currentBank = 'ing';
     let lastCurlCommand = '';
+    let currentPaymentID = '';
+
+    function checkURLHash() {
+      if (window.location.hash.startsWith('#authorize')) {
+        const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+        currentPaymentID = params.get('payment_id') || 'PAY-ING-LIVE';
+        const amount = params.get('amount') || '149.00';
+        const merchant = params.get('merchant') || 'Webshop B.V.';
+        
+        document.getElementById('scaAmountDisplay').innerText = '€ ' + amount;
+        document.getElementById('scaMerchantDisplay').innerText = merchant;
+        document.getElementById('scaModal').style.display = 'flex';
+      } else if (window.location.hash === '#success') {
+        alert('🎉 Settlement Completed! Payment has been executed over SEPA Instant.');
+      }
+    }
+    window.addEventListener('hashchange', checkURLHash);
+    window.addEventListener('load', checkURLHash);
+
+    function closeSCAModal() {
+      document.getElementById('scaModal').style.display = 'none';
+      window.location.hash = '';
+    }
+
+    async function confirmSCAAuthorization() {
+      const btn = event.currentTarget;
+      btn.innerText = 'AUTHENTICATING FACE ID...';
+      try {
+        const res = await fetch(`/api/v1/payments/${currentPaymentID}/authorize`, { method: 'POST' });
+        const data = await res.json();
+        btn.innerText = '✓ AUTHORIZED!';
+        setTimeout(() => {
+          document.getElementById('scaModal').style.display = 'none';
+          window.location.hash = 'success';
+          alert(`✅ PAYMENT SUCCESSFUL!\n\nStatus: ${data.status}\nRail: ${data.settlement_rail}\nClearing Ref: ${data.clearing_reference}`);
+        }, 600);
+      } catch (err) {
+        alert('Authorization failed: ' + err.message);
+      }
+    }
+
 
     function selectBank(bankId) {
       currentBank = bankId;
@@ -548,6 +633,8 @@ curl -i -X POST 'https://api.sandbox.ing.com/v2/payments/sepa-credit-transfers' 
         const tele = data.live_telemetry;
         const tls = tele.tls_info;
 
+        currentPaymentID = data.payment_id;
+
         // Update Key Metrics
         document.getElementById('metricIp').innerText = tls.resolved_ip;
         document.getElementById('metricLatency').innerText = tele.latency_ms + ' ms';
@@ -559,11 +646,25 @@ curl -i -X POST 'https://api.sandbox.ing.com/v2/payments/sepa-credit-transfers' 
         document.getElementById('statusBadge').style.background = '#00d66c';
 
         // Proof Banner
-        document.getElementById('proofBanner').innerHTML = `
+        let proofHtml = `
           <h3>✓ VERIFIED LIVE CONNECTION TO ${data.bank.name.toUpperCase()}</h3>
           <p><strong>Resolved IP:</strong> ${tls.resolved_ip} (Port 443) // <strong>TLS Issuer:</strong> ${tls.cert_issuer}</p>
           <p style="margin-top: 6px;"><strong>Proof Analysis:</strong> ${data.proof_analysis.why_this_proves_connection}</p>
         `;
+        if (data.sca_redirect_url) {
+          proofHtml += `
+            <div style="margin-top: 12px; padding: 12px; background: #ffffff; border: var(--border-thick); box-shadow: 2px 2px 0px #000000;">
+              <div style="font-family: 'JetBrains Mono'; font-size: 11px; font-weight: 800; color: #ff5f1f; text-transform: uppercase;">
+                🔐 Strong Customer Authentication (SCA) Ready
+              </div>
+              <p style="font-size: 12px; margin: 4px 0 8px 0;">The bank gateway returned an authenticated SCA authorization URL for this payment.</p>
+              <a href="${data.sca_redirect_url}" target="_blank" class="raw-btn" style="text-decoration: none; padding: 10px 16px; font-size: 12px; display: inline-flex; width: auto; background: #ffe600;">
+                <span>🚀 OPEN ING AUTHORIZATION PORTAL &rarr;</span>
+              </a>
+            </div>
+          `;
+        }
+        document.getElementById('proofBanner').innerHTML = proofHtml;
 
         // Response Headers
         let respHeadersStr = `HTTP/1.1 ${tele.status_code} ${tele.reason}\n`;

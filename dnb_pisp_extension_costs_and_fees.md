@@ -41,12 +41,12 @@ The largest recurring financial obligation of a PISP license is **not** the cent
 
 * **Legal Requirement:** Under **Article 5(2) of PSD2** and **EBA Guidelines (EBA/GL/2017/08)**, a PISP must maintain an active PII policy or comparable bank guarantee covering liability toward ASPSPs (banks) and payment service users for unauthorized, non-executed, or defectively executed payment transactions.
 * **Calculation Formula:** Based on value of transactions initiated, risk profile, and historical claims.
-* **Commercial Cost:** Underwritten by specialized financial lines brokers (Marsh, Aon, Lloyd's). For an enterprise payment volume, annual premiums typically range between **€15,000 and €35,000 per year**.
+* **Commercial Cost:** Underwritten by specialized financial lines brokers (Marsh, Aon, Lloyd's). For an enterprise payment volume, annual premiums for a standalone policy typically range between **€15,000 and €35,000 per year**; adding a rider to CM.com's existing tech E&O policy is cheaper at **€5,000 – €15,000 per year** (see `psd2_pii_insurance_analysis.md`).
 * **DNB Gate:** DNB will **not** grant the Service 7 license extension until a binding insurance cover note meeting the exact EBA calculation threshold is uploaded to the DNB Digital Supervision Portal (*MijnDNB*).
 
 ---
 
 ## 4. Total Cost of Ownership (Year 1 vs. Year 2+)
 
-* **Year 1 Total Investment:** **~€25,000 – €45,000** (DNB €2,700 application + €20k PII + €2k eIDAS certs + base DNB supervision).
-* **Subsequent Years Recurring:** **~€20,000 – €40,000 / year** (PII insurance + eIDAS certificates + DNB annual supervisory levy).
+* **Year 1 Total Investment:** **~€24,000 – €48,000** (DNB €2,700 application + €15k–35k standalone PII + €1.5k–3k eIDAS certs + €4.5k–7.5k base DNB supervision; excludes the variable levy). Gross figures: CM already pays the base levy, so the incremental delta is in the dossier.
+* **Subsequent Years Recurring:** **~€21,000 – €46,000 / year** (PII insurance + eIDAS certificates + DNB annual supervisory levy; excludes the variable levy).

@@ -1,0 +1,53 @@
+name: Deploy Pay by Bank Gateway to Unraid
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Unraid Server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: false
+
+      - name: Build Linux amd64 Binary
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o pay-by-bank-gateway .
+
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.UNRAID_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p ${{ secrets.UNRAID_SSH_PORT || '48222' }} -H ${{ secrets.UNRAID_HOST || 'homeassistantkrooswijkhof.duckdns.org' }} >> ~/.ssh/known_hosts
+
+      - name: Sync App Files to Unraid
+        run: |
+          rsync -avz \
+            -e "ssh -p ${{ secrets.UNRAID_SSH_PORT || '48222' }} -o StrictHostKeyChecking=no" \
+            --exclude '.git' \
+            --exclude '.github' \
+            ./ root@${{ secrets.UNRAID_HOST || 'homeassistantkrooswijkhof.duckdns.org' }}:/mnt/user/appdata/pay-by-bank/app/
+
+      - name: Build and Restart Docker Container
+        run: |
+          ssh -p ${{ secrets.UNRAID_SSH_PORT || '48222' }} -o StrictHostKeyChecking=no \
+            root@${{ secrets.UNRAID_HOST || 'homeassistantkrooswijkhof.duckdns.org' }} \
+            "cd /mnt/user/appdata/pay-by-bank/app && docker compose up -d --build"
+
+      - name: Verify Container Health
+        run: |
+          ssh -p ${{ secrets.UNRAID_SSH_PORT || '48222' }} -o StrictHostKeyChecking=no \
+            root@${{ secrets.UNRAID_HOST || 'homeassistantkrooswijkhof.duckdns.org' }} \
+            "sleep 3 && curl -s -f http://127.0.0.1:8088/api/v1/banks > /dev/null && echo '✅ Pay by Bank Gateway is healthy and running!'"

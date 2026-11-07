@@ -314,7 +314,7 @@ flowchart TD
 | **Legal Role of CM.com** | Technical Service Provider (TSP) / Commercial Reseller | Direct Authorized Payment Initiation Service Provider (PISP) |
 | **DNB Licensing Scope** | No change required (operates under current Services 3 & 5) | Formal Scope Extension Application (*Uitbreiding vergunning*) |
 | **Upfront DNB Costs** | €0 | €2,700 statutory application fee + internal regulatory filing costs |
-| **Annual Regulatory Overhead** | €0 | €15,000 – €35,000 / year (PII policy) + €2,000 eIDAS certs + DNB variable levy |
+| **Annual Regulatory Overhead** | €0 | €15,000 – €35,000 / year (standalone PII policy; €5,000 – €15,000 as a rider on existing tech E&O) + €2,000 eIDAS certs + DNB variable levy |
 | **Time to Market** | Immediate (4 – 8 weeks integration) | 4 – 7 months (statutory review + policy issuance) |
 | **eIDAS Certificate Ownership** | Partner holds QWAC/QSealC with `PSP_PI` | CM Payments B.V. holds proprietary QWAC/QSealC (`PSDNL-DNB-R129862`) |
 | **User Experience & Branding** | Bank redirect shows partner's legal name (or co-branding) | Bank redirect shows **CM Payments B.V.** directly |

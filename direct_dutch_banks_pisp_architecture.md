@@ -1,6 +1,6 @@
 # Direct PISP Architecture: Dutch Top 3 Banks (ING, Rabobank, ABN AMRO)
 **Company:** CM.com (CM Payments B.V.)  
-**Role:** Payment Service Provider / Licensed PISP  
+**Role:** Payment Service Provider / PISP (pending DNB Service 7 scope extension)  
 **Target Coverage:** ~85%–90% of Dutch Consumer Retail Banking  
 
 ---
@@ -10,8 +10,8 @@
 To establish direct mTLS connections and execute Payment Initiation (PIS) calls with ING, Rabobank, and ABN AMRO without an intermediary:
 
 1. **Regulatory License & Passporting:**
-   * Regulated under **CM Payments B.V.**'s PSD2 Payment Institution (PI) / Electronic Money Institution (EMI) license registered with **De Nederlandsche Bank (DNB)**.
-   * Explicit authorization for **Payment Initiation Services (PISP)** (PSD2 Annex I, Service 7).
+   * Regulated under **CM Payments B.V.**'s PSD2 Payment Institution (PI) license registered with **De Nederlandsche Bank (DNB)**.
+   * Explicit authorization for **Payment Initiation Services (PISP)** (PSD2 Annex I, Service 7). **Not yet held by CM Payments B.V.**; requires a DNB scope extension (see `psd2_pisp_regulatory_analysis.md`).
 2. **eIDAS Cryptographic Certificates (from a Qualified Trust Service Provider - QTSP):**
    * **QWAC (Qualified Website Authentication Certificate):** Used for mutual TLS (mTLS) handshakes to authenticate CM.com servers to bank API gateways.
    * **QSealC (Qualified Electronic Seal Certificate):** Used for HTTP request payload signing (JWS / RFC 7515 or Berlin Group HTTP Signature specifications) to guarantee non-repudiation and integrity.

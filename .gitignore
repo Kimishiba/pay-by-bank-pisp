@@ -1,3 +1,8 @@
+# Credentials and environment secrets
+.env*
+*.secrets
+.credentials
+
 # Binaries
 pay-by-bank-gateway
 *.exe

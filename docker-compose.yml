@@ -1,0 +1,15 @@
+name: pay-by-bank
+
+services:
+  pay-by-bank-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pay-by-bank-gateway
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    environment:
+      - PORT=8088
+    volumes:
+      - ./certs:/app/certs:ro
