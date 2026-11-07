@@ -527,8 +527,8 @@ curl -i -X POST 'https://api.sandbox.ing.com/v2/payments/sepa-credit-transfers' 
     <div style="background: #ffffff; border: 3px solid #000000; box-shadow: 6px 6px 0px #000000; max-width: 440px; width: 100%; padding: 24px;">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000000; padding-bottom: 12px; margin-bottom: 16px;">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <div style="background: #ff5f1f; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 900; font-size: 14px;">🦁</div>
-          <span style="font-family: 'Anybody'; font-weight: 900; font-size: 16px; text-transform: uppercase;">ING Mobiel Bankieren</span>
+          <div style="background: #ff5f1f; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 900; font-size: 14px;" id="scaBankIconDisplay">🦁</div>
+          <span style="font-family: 'Anybody'; font-weight: 900; font-size: 16px; text-transform: uppercase;" id="scaBankNameDisplay">ING Mobiel Bankieren</span>
         </div>
         <span style="font-family: 'JetBrains Mono'; font-size: 10px; font-weight: 800; background: #ffe600; padding: 2px 6px; border: 1px solid #000000;">SCA SIMULATOR</span>
       </div>
@@ -543,7 +543,7 @@ curl -i -X POST 'https://api.sandbox.ing.com/v2/payments/sepa-credit-transfers' 
       <div style="background: #f7f7f7; border: 1.5px solid #000000; padding: 12px; margin-bottom: 20px; font-family: 'JetBrains Mono'; font-size: 11px;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
           <span>DEBTOR IBAN:</span>
-          <strong>NL88INGB0009876543</strong>
+          <strong id="scaDebtorIbanDisplay">NL88INGB0009876543</strong>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
           <span>RAIL:</span>
@@ -567,6 +567,14 @@ curl -i -X POST 'https://api.sandbox.ing.com/v2/payments/sepa-credit-transfers' 
   </div>
 
   <script>
+    const BANK_META = {
+      ing: { name: 'ING Bank', app: 'ING Mobiel Bankieren', icon: '🦁', iban: 'NL88INGB0009876543' },
+      rabobank: { name: 'Rabobank', app: 'Rabo App', icon: '🟠', iban: 'NL22RABO0123456789' },
+      abnamro: { name: 'ABN AMRO', app: 'ABN AMRO Mobiel', icon: '🟢', iban: 'NL91ABNA0417164300' },
+      volksbank: { name: 'De Volksbank', app: 'SNS / ASN Bankieren', icon: '🏦', iban: 'NL44SNSB0123456789' },
+      revolut: { name: 'Revolut Bank', app: 'Revolut App', icon: '⚡', iban: 'LT00REVO1234567890' }
+    };
+
     let currentBank = 'ing';
     let lastCurlCommand = '';
     let currentPaymentID = '';
@@ -574,8 +582,14 @@ curl -i -X POST 'https://api.sandbox.ing.com/v2/payments/sepa-credit-transfers' 
 
     function openSCAModalDirectly() {
       if (!currentPaymentRecord) return;
+      const bankKey = (currentPaymentRecord.bank_id || currentBank || 'ing').toLowerCase();
+      const meta = BANK_META[bankKey] || { name: (currentPaymentRecord.bank && currentPaymentRecord.bank.name) || 'Bank', app: (currentPaymentRecord.bank && currentPaymentRecord.bank.app_name) || 'Mobile Banking', icon: '🏦', iban: 'NL99CMCO0123456789' };
+
+      document.getElementById('scaBankIconDisplay').innerText = meta.icon;
+      document.getElementById('scaBankNameDisplay').innerText = meta.app;
+      document.getElementById('scaDebtorIbanDisplay').innerText = meta.iban;
       document.getElementById('scaAmountDisplay').innerText = '€ ' + currentPaymentRecord.amount.toFixed(2);
-      document.getElementById('scaMerchantDisplay').innerText = currentPaymentRecord.berlin_group_payload.creditorName || 'Webshop B.V.';
+      document.getElementById('scaMerchantDisplay').innerText = (currentPaymentRecord.berlin_group_payload && currentPaymentRecord.berlin_group_payload.creditorName) || 'Webshop B.V.';
       document.getElementById('scaModal').style.display = 'flex';
     }
 
@@ -584,9 +598,14 @@ curl -i -X POST 'https://api.sandbox.ing.com/v2/payments/sepa-credit-transfers' 
       if (hash.startsWith('#authorize')) {
         const params = new URLSearchParams(hash.split('?')[1] || '');
         currentPaymentID = params.get('payment_id') || currentPaymentID;
+        const bankKey = (params.get('bank') || currentBank || 'ing').toLowerCase();
+        const meta = BANK_META[bankKey] || { name: 'Bank', app: 'Mobile Banking', icon: '🏦', iban: 'NL99CMCO0123456789' };
         const amount = params.get('amount') || '149.00';
         const merchant = params.get('merchant') || 'Webshop B.V.';
         
+        document.getElementById('scaBankIconDisplay').innerText = meta.icon;
+        document.getElementById('scaBankNameDisplay').innerText = meta.app;
+        document.getElementById('scaDebtorIbanDisplay').innerText = meta.iban;
         document.getElementById('scaAmountDisplay').innerText = '€ ' + amount;
         document.getElementById('scaMerchantDisplay').innerText = merchant;
         document.getElementById('scaModal').style.display = 'flex';
@@ -669,6 +688,9 @@ curl -i -X POST 'https://api.sandbox.ing.com/v2/payments/sepa-credit-transfers' 
         </div>
       `;
 
+      const bankKey = (data.bank_id || currentBank || 'ing').toLowerCase();
+      const meta = BANK_META[bankKey] || { name: 'Bank', app: 'Mobile Banking', icon: '🏦' };
+
       // Append rich settlement event stream to the Live Response Terminal
       const timestamp = data.authorized_at || new Date().toISOString();
       const settlementLog = `
@@ -676,7 +698,7 @@ curl -i -X POST 'https://api.sandbox.ing.com/v2/payments/sepa-credit-transfers' 
 >>> SEPA INSTANT CLEARING & SETTLEMENT AUDIT STREAM <<<
 ================================================================================
 [${timestamp}] EVENT: BANK_SCA_CHALLENGE_COMPLETED
-  • Payer Authenticator: ING Mobiel Bankieren (App-to-App Biometric / Face ID)
+  • Payer Authenticator: ${meta.app} (App-to-App Biometric / Face ID)
   • Creditor: ${data.creditor_name} (${data.creditor_iban})
   • Instructed Amount: € ${data.amount.toFixed(2)} ${data.currency}
 
@@ -727,7 +749,7 @@ curl -i -X POST 'https://api.sandbox.ing.com/v2/payments/sepa-credit-transfers' 
             </div>
             <p style="font-size: 12px; margin: 4px 0 8px 0;">The bank gateway returned an authenticated SCA authorization URL for this payment.</p>
             <button onclick="openSCAModalDirectly()" class="raw-btn" style="text-decoration: none; padding: 10px 16px; font-size: 12px; display: inline-flex; width: auto; background: #ffe600; cursor: pointer;">
-              <span>🚀 OPEN ING AUTHORIZATION PORTAL &rarr;</span>
+              <span>🚀 OPEN ${data.bank.name.toUpperCase()} AUTHORIZATION PORTAL &rarr;</span>
             </button>
           </div>
         `;
