@@ -77,6 +77,16 @@ var BankEndpoints = map[string]BankConfig{
 		AppName:       "SNS / ASN Bankieren",
 		ExpectedProof: "Layer7-API-Gateway server header and 401 Unauthorized",
 	},
+	"revolut": {
+		Name:          "Revolut Bank",
+		BIC:           "REVONL21",
+		SandboxURL:    "https://sandbox-oba.revolut.com/pis/payment-setups",
+		ProdURL:       "https://oba.revolut.com/pis/payment-setups",
+		Hostname:      "sandbox-oba.revolut.com",
+		Scheme:        "Revolut Open Banking PSD2 / eIDAS mTLS",
+		AppName:       "Revolut App",
+		ExpectedProof: "Cloudflare/Google Cloud API Gateway with Request-ID and mTLS challenge",
+	},
 }
 
 type PaymentRequest struct {

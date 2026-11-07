@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>CM Payments B.V. · European PISP Standards Dossier: Berlin Group vs. STET</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@700;800;900&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --pitch-black: #000000;
+      --pure-white: #ffffff;
+      --canvas-bg: #f4f5f7;
+      --vibrant-orange: #ff5f1f;
+      --surface-card: #ffffff;
+      --surface-subtle: #f9f9f9;
+      --border-heavy: 4px solid #000000;
+      --border-medium: 3px solid #000000;
+      --border-thin: 2px solid #000000;
+      --shadow-hard: 6px 6px 0px #000000;
+      --shadow-hard-sm: 4px 4px 0px #000000;
+      --shadow-hard-lg: 8px 8px 0px #000000;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--canvas-bg);
+      color: var(--pitch-black);
+      font-family: 'Hanken Grotesk', -apple-system, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      padding: 40px 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .dossier-wrapper {
+      max-width: 1040px;
+      width: 100%;
+      background: var(--surface-card);
+      border: var(--border-heavy);
+      box-shadow: var(--shadow-hard-lg);
+    }
+
+    /* HEADER */
+    .dossier-header {
+      background: var(--vibrant-orange);
+      border-bottom: var(--border-heavy);
+      padding: 40px 48px;
+      color: var(--pitch-black);
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      border-bottom: var(--border-thin);
+      padding-bottom: 16px;
+    }
+
+    .brand-mark {
+      font-family: 'Anybody', sans-serif;
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      text-transform: uppercase;
+      background: #000000;
+      color: #ffffff;
+      padding: 6px 14px;
+      display: inline-block;
+    }
+
+    .classification-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 800;
+      background: var(--pure-white);
+      border: var(--border-thin);
+      padding: 4px 10px;
+      text-transform: uppercase;
+      box-shadow: 2px 2px 0px #000000;
+    }
+
+    h1.dossier-title {
+      font-family: 'Anybody', sans-serif;
+      font-size: 38px;
+      line-height: 1.1;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -0.03em;
+      margin-bottom: 16px;
+    }
+
+    .dossier-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+    }
+
+    .meta-item {
+      background: var(--pure-white);
+      border: var(--border-thin);
+      padding: 8px 12px;
+      box-shadow: 3px 3px 0px #000000;
+    }
+
+    .meta-label {
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #666666;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .meta-value {
+      font-weight: 700;
+      color: #000000;
+    }
+
+    /* BODY CONTENT */
+    .dossier-body {
+      padding: 48px;
+    }
+
+    .executive-callout {
+      background: #fffdf0;
+      border: var(--border-heavy);
+      box-shadow: var(--shadow-hard);
+      padding: 24px 28px;
+      margin-bottom: 40px;
+    }
+
+    .callout-title {
+      font-family: 'Anybody', sans-serif;
+      font-size: 20px;
+      font-weight: 900;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .callout-badge {
+      background: var(--vibrant-orange);
+      color: #000000;
+      border: var(--border-thin);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 2px 8px;
+    }
+
+    .section-title {
+      font-family: 'Anybody', sans-serif;
+      font-size: 24px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+      margin: 40px 0 16px 0;
+      padding-bottom: 8px;
+      border-bottom: var(--border-heavy);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .section-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      background: var(--pitch-black);
+      color: var(--pure-white);
+      padding: 3px 8px;
+      font-weight: 700;
+    }
+
+    p { margin-bottom: 16px; }
+
+    /* COMPARISON TABLES */
+    .raw-table-wrapper {
+      border: var(--border-heavy);
+      box-shadow: var(--shadow-hard);
+      margin: 24px 0 36px 0;
+      overflow-x: auto;
+      background: var(--pure-white);
+    }
+
+    table.raw-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    table.raw-table th {
+      background: #000000;
+      color: #ffffff;
+      font-family: 'Anybody', sans-serif;
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 12px 14px;
+      border-right: 1px solid #333333;
+    }
+
+    table.raw-table td {
+      padding: 12px 14px;
+      border-bottom: 2px solid #000000;
+      border-right: 1px solid #eeeeee;
+      vertical-align: top;
+    }
+
+    table.raw-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.raw-table tr:nth-child(even) {
+      background: var(--surface-subtle);
+    }
+
+    .badge-yes {
+      background: #00c853;
+      color: #000000;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 6px;
+      border: 1px solid #000000;
+      display: inline-block;
+    }
+
+    .badge-no {
+      background: #ff5252;
+      color: #ffffff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 6px;
+      border: 1px solid #000000;
+      display: inline-block;
+    }
+
+    .badge-partial {
+      background: #ffd600;
+      color: #000000;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 6px;
+      border: 1px solid #000000;
+      display: inline-block;
+    }
+
+    .code-block {
+      background: #0f141c;
+      color: #e2e8f0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      padding: 18px;
+      border: var(--border-medium);
+      box-shadow: var(--shadow-hard-sm);
+      overflow-x: auto;
+      margin: 16px 0 24px 0;
+      line-height: 1.5;
+    }
+
+    .key-metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin: 24px 0 32px 0;
+    }
+
+    .metric-card {
+      background: var(--pure-white);
+      border: var(--border-medium);
+      box-shadow: var(--shadow-hard-sm);
+      padding: 20px;
+    }
+
+    .metric-num {
+      font-family: 'Anybody', sans-serif;
+      font-size: 38px;
+      font-weight: 900;
+      color: var(--vibrant-orange);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .metric-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #000000;
+    }
+
+    .dossier-footer {
+      border-top: var(--border-heavy);
+      padding: 24px 48px;
+      background: #000000;
+      color: #ffffff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+    }
+
+    @media print {
+      body { padding: 0; background: #ffffff; }
+      .dossier-wrapper { box-shadow: none; border: none; max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="dossier-wrapper">
+
+  <!-- HEADER -->
+  <header class="dossier-header">
+    <div class="header-top">
+      <div class="brand-mark">CM.COM · PAYMENTS B.V.</div>
+      <div class="classification-tag">CONFIDENTIAL · STRATEGIC PISP DOSSIER</div>
+    </div>
+    <h1 class="dossier-title">European Open Banking Standards:<br>Berlin Group NextGenPSD2 vs. STET</h1>
+    <p style="font-weight: 600; font-size: 17px; max-width: 820px;">
+      Comprehensive architectural, regulatory, and integration analysis for direct Pay by Bank initiation across the Netherlands, Germany, France, and Belgium.
+    </p>
+
+    <div class="dossier-meta-grid">
+      <div class="meta-item">
+        <span class="meta-label">APPLICANT ENTITY</span>
+        <span class="meta-value">CM Payments B.V.</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">SUPERVISORY REGULATOR</span>
+        <span class="meta-value">De Nederlandsche Bank (DNB)</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">AUTHORIZATION TARGET</span>
+        <span class="meta-value">Service 7 (PISP Extension)</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">RETAIL COVERAGE SCOPE</span>
+        <span class="meta-value">&gt;85% Western Europe</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- BODY -->
+  <div class="dossier-body">
+
+    <!-- EXECUTIVE CALLOUT -->
+    <div class="executive-callout">
+      <div class="callout-title">
+        <span>Strategic Finding: Europe's Geopolitical Standards Split</span>
+        <span class="callout-badge">KEY TAKEAWAY</span>
+      </div>
+      <p>
+        Under PSD2, European retail banking divided into two non-interoperable regional technical standards: <strong>Berlin Group NextGenPSD2</strong> in Germany (~100%), the Netherlands (~90%+), and domestic Belgium (~70%); and <strong>STET PSD2</strong> across France (~95%).
+      </p>
+      <p style="margin-bottom: 0;">
+        <strong>The Breakthrough:</strong> Building a single <strong>STET adapter</strong> in the CM.com Gateway unlocks virtually the entire French retail market (BNP Paribas, Crédit Agricole, Société Générale, BPCE, and Crédit Mutuel) without requiring custom code for individual banks. With our existing Berlin Group engine and a companion STET engine, CM Payments B.V. achieves sovereign coverage of <strong>over 85% of Western European transaction accounts</strong>.
+      </p>
+    </div>
+
+    <!-- METRICS -->
+    <div class="key-metric-grid">
+      <div class="metric-card">
+        <div class="metric-num">100%</div>
+        <div class="metric-label">German Market on Berlin Group</div>
+        <p style="font-size: 12px; margin-top: 6px; color: #555;">Sparkassen & Volksbanken auto-onboard via eIDAS certificates.</p>
+      </div>
+      <div class="metric-card">
+        <div class="metric-num">95%+</div>
+        <div class="metric-label">French Market on STET Standard</div>
+        <p style="font-size: 12px; margin-top: 6px; color: #555;">All Top 6 French banking groups share the STET PIS specification.</p>
+      </div>
+      <div class="metric-card">
+        <div class="metric-num">2 ENGINES</div>
+        <div class="metric-label">Required for Western Europe</div>
+        <p style="font-size: 12px; margin-top: 6px; color: #555;">1 Berlin Group Engine + 1 STET Engine covers NL, DE, FR, and BE.</p>
+      </div>
+    </div>
+
+    <!-- SECTION 1 -->
+    <div class="section-title">
+      <span>1. Comparative Architecture: Berlin Group vs. STET</span>
+      <span class="section-tag">PROTOCOL SPECIFICATIONS</span>
+    </div>
+
+    <div class="raw-table-wrapper">
+      <table class="raw-table">
+        <thead>
+          <tr>
+            <th>Technical Dimension</th>
+            <th>Berlin Group NextGenPSD2</th>
+            <th>STET PSD2 Specification</th>
+            <th>Architectural Impact</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Dominant Geography</strong></td>
+            <td>Germany, Netherlands, Austria, Belgium (~70%), Nordics</td>
+            <td>France (~95%), French overseas territories, parts of Belgium</td>
+            <td>Enables clear geographic routing in gateway dispatcher.</td>
+          </tr>
+          <tr>
+            <td><strong>PIS Initiation Path</strong></td>
+            <td><code>POST /v1/payments/sepa-credit-transfers</code></td>
+            <td><code>POST /payment-requests</code></td>
+            <td>Target URL mapped by bank BIC routing table.</td>
+          </tr>
+          <tr>
+            <td><strong>Status Inquiry Path</strong></td>
+            <td><code>GET .../sepa-credit-transfers/{id}/status</code></td>
+            <td><code>GET /payment-requests/{id}</code></td>
+            <td>Polling / Webhook status endpoint normalization.</td>
+          </tr>
+          <tr>
+            <td><strong>Payload Structure</strong></td>
+            <td>Flat ISO 20022 JSON (<code>instructedAmount</code>, <code>debtorAccount</code>, <code>creditorAccount</code>)</td>
+            <td>Nested STET JSON (<code>initiatingParty</code>, <code>beneficiary</code>, <code>creditTransferTransaction</code>)</td>
+            <td>Separate Go serializer structs for each dialect.</td>
+          </tr>
+          <tr>
+            <td><strong>Application Signing</strong></td>
+            <td>JWS (RFC 7515 / ING) or Cavage HTTP-Sig (Rabobank)</td>
+            <td>STET-profile HTTP Signatures (Digest + Date + X-Request-ID)</td>
+            <td>Both signed using the same corporate <strong>eIDAS QSealC</strong>.</td>
+          </tr>
+          <tr>
+            <td><strong>Transport Security</strong></td>
+            <td>Mutual TLS (mTLS) with eIDAS QWAC</td>
+            <td>Mutual TLS (mTLS) with eIDAS QWAC</td>
+            <td>Universal transport handshake across all banks.</td>
+          </tr>
+          <tr>
+            <td><strong>SCA Redirect Format</strong></td>
+            <td>Hypermedia: <code>_links.scaRedirect.href</code></td>
+            <td>Hypermedia: <code>_links.consentApproval.href</code></td>
+            <td>Normalized redirect URL handed off to checkout.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SECTION 2 -->
+    <div class="section-title">
+      <span>2. Country-by-Country Verification: Top 10 Banks</span>
+      <span class="section-tag">ASPSP DIRECTORY</span>
+    </div>
+
+    <h3 style="font-family: 'Anybody', sans-serif; font-size: 18px; margin: 24px 0 10px 0; text-transform: uppercase;">A. Germany (DE) · 100% Berlin Group</h3>
+    <div class="raw-table-wrapper">
+      <table class="raw-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Institution / Group</th>
+            <th>API Standard</th>
+            <th>Berlin Group?</th>
+            <th>DCR / Automated Onboarding</th>
+            <th>Sandbox Model</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><strong>Sparkassen-Finanzgruppe</strong> (~360 banks)</td>
+            <td>NextGenPSD2 (Finanz Informatik)</td>
+            <td><span class="badge-yes">YES</span></td>
+            <td><span class="badge-yes">YES</span> (Zero-touch eIDAS auto-registration)</td>
+            <td>Finanz Informatik Sandbox Hub</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><strong>Volksbanken Raiffeisenbanken</strong> (~700 banks)</td>
+            <td>NextGenPSD2 (Atruvia AG)</td>
+            <td><span class="badge-yes">YES</span></td>
+            <td><span class="badge-yes">YES</span> (Automated eIDAS onboarding)</td>
+            <td>Atruvia Sandbox Hub</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><strong>Deutsche Bank AG</strong> (incl. Postbank)</td>
+            <td>NextGenPSD2 v1.3</td>
+            <td><span class="badge-yes">YES</span></td>
+            <td><span class="badge-partial">PARTIAL</span> (eIDAS prod; portal sandbox)</td>
+            <td>developer.db.com</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><strong>Commerzbank AG</strong> (incl. comdirect)</td>
+            <td>NextGenPSD2 v1.3</td>
+            <td><span class="badge-yes">YES</span></td>
+            <td><span class="badge-partial">PARTIAL</span> (eIDAS prod; portal sandbox)</td>
+            <td>developer.commerzbank.com</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><strong>ING-DiBa AG</strong> (ING Germany)</td>
+            <td>NextGenPSD2 v2.0</td>
+            <td><span class="badge-yes">YES</span></td>
+            <td><span class="badge-no">NO</span> (ING Client ID required)</td>
+            <td>developer.ing.com</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><strong>UniCredit Bank GmbH</strong> (HypoVereinsbank)</td>
+            <td>NextGenPSD2 v1.3</td>
+            <td><span class="badge-yes">YES</span></td>
+            <td><span class="badge-yes">YES</span> (Automated via eIDAS QWAC)</td>
+            <td>UniCredit Open Banking Hub</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td><strong>DKB</strong> (Deutsche Kreditbank)</td>
+            <td>NextGenPSD2 (BayernLB Hub)</td>
+            <td><span class="badge-yes">YES</span></td>
+            <td><span class="badge-yes">YES</span> (Shared BayernLB infrastructure)</td>
+            <td>DKB / BayernLB Sandbox</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td><strong>N26 Bank AG</strong></td>
+            <td>NextGenPSD2 v1.3</td>
+            <td><span class="badge-yes">YES</span></td>
+            <td><span class="badge-yes">YES</span> (Automated DCR & eIDAS)</td>
+            <td>developer.n26.com</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="font-family: 'Anybody', sans-serif; font-size: 18px; margin: 28px 0 10px 0; text-transform: uppercase;">B. France (FR) · 95%+ STET Standard</h3>
+    <div class="raw-table-wrapper">
+      <table class="raw-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Institution / Group</th>
+            <th>API Standard</th>
+            <th>Berlin Group?</th>
+            <th>DCR / Automated Onboarding</th>
+            <th>Sandbox Model</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><strong>BNP Paribas</strong> (incl. Hello bank!)</td>
+            <td><strong>STET PSD2</strong></td>
+            <td><span class="badge-no">NO</span></td>
+            <td><span class="badge-no">NO</span> (Developer portal onboarding)</td>
+            <td>developer.bnpparibas</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><strong>Crédit Agricole Group</strong> (incl. LCL)</td>
+            <td><strong>STET PSD2</strong></td>
+            <td><span class="badge-no">NO</span></td>
+            <td><span class="badge-no">NO</span> (CA-Store / CAPS enrollment)</td>
+            <td>ca-store.fr</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><strong>Société Générale</strong> (incl. BoursoBank)</td>
+            <td><strong>STET PSD2</strong></td>
+            <td><span class="badge-no">NO</span></td>
+            <td><span class="badge-no">NO</span> (SG Developer Portal registration)</td>
+            <td>developer.societegenerale.com</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><strong>Groupe BPCE</strong> (Banque Populaire / Caisse d'Epargne)</td>
+            <td><strong>STET PSD2</strong></td>
+            <td><span class="badge-no">NO</span></td>
+            <td><span class="badge-no">NO</span> (Managed via 89C3 API portal)</td>
+            <td>api.89c3.com</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><strong>Crédit Mutuel Alliance Fédérale</strong> (incl. CIC)</td>
+            <td><strong>STET PSD2</strong></td>
+            <td><span class="badge-no">NO</span></td>
+            <td><span class="badge-no">NO</span> (Euro-Information gateway)</td>
+            <td>Euro-Information Portal</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><strong>La Banque Postale</strong></td>
+            <td><strong>STET PSD2</strong></td>
+            <td><span class="badge-no">NO</span></td>
+            <td><span class="badge-no">NO</span> (LBP Developer Portal)</td>
+            <td>LBP Developer Portal</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="font-family: 'Anybody', sans-serif; font-size: 18px; margin: 28px 0 10px 0; text-transform: uppercase;">C. Belgium (BE) · Hybrid Market</h3>
+    <div class="raw-table-wrapper">
+      <table class="raw-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Institution / Group</th>
+            <th>API Standard</th>
+            <th>Berlin Group?</th>
+            <th>DCR / Automated Onboarding</th>
+            <th>Sandbox Model</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><strong>BNP Paribas Fortis</strong></td>
+            <td>STET / Group REST</td>
+            <td><span class="badge-no">NO</span></td>
+            <td><span class="badge-no">NO</span> (BNP Paribas engine)</td>
+            <td>developer.bnpparibas</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><strong>KBC Bank / CBC</strong></td>
+            <td>NextGenPSD2</td>
+            <td><span class="badge-yes">YES</span></td>
+            <td><span class="badge-partial">PARTIAL</span> (eIDAS prod; portal sandbox)</td>
+            <td>developer.kbc.be</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><strong>Belfius Bank</strong></td>
+            <td>NextGenPSD2</td>
+            <td><span class="badge-yes">YES</span></td>
+            <td><span class="badge-partial">PARTIAL</span> (eIDAS prod; portal sandbox)</td>
+            <td>belfius.be/developer</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><strong>ING Belgium</strong></td>
+            <td>NextGenPSD2 v2.0</td>
+            <td><span class="badge-yes">YES</span></td>
+            <td><span class="badge-no">NO</span> (Shared ING Client ID)</td>
+            <td>developer.ing.com</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><strong>Argenta</strong></td>
+            <td>NextGenPSD2</td>
+            <td><span class="badge-yes">YES</span></td>
+            <td><span class="badge-partial">PARTIAL</span> (Isabel Group Hub)</td>
+            <td>Argenta Open Banking</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SECTION 3 -->
+    <div class="section-title">
+      <span>3. Gateway Engineering Architecture</span>
+      <span class="section-tag">DUAL-ENGINE SPECIFICATION</span>
+    </div>
+
+    <p>
+      CM.com's Go gateway (<code>pay-by-bank-gateway</code>) utilizes an internal abstract payment interface that marshals checkout requests into the appropriate wire protocol based on the selected bank BIC:
+    </p>
+
+    <div class="code-block">
+// Sample STET Wire Payload Structure for French Banks
+type STETPaymentRequest struct {
+    InitiatingParty struct {
+        Name string `json:"name"`
+    } `json:"initiatingParty"`
+    Beneficiary struct {
+        Name            string `json:"name"`
+        CreditorAccount struct {
+            IBAN     string `json:"iban"`
+            Currency string `json:"currency"`
+        } `json:"creditorAccount"`
+    } `json:"beneficiary"`
+    CreditTransferTransaction []struct {
+        PaymentID struct {
+            InstructionIdentification string `json:"instructionIdentification"`
+            EndToEndIdentification    string `json:"endToEndIdentification"`
+        } `json:"paymentId"`
+        InstructedAmount struct {
+            Amount   float64 `json:"amount"`
+            Currency string  `json:"currency"`
+        } `json:"instructedAmount"`
+        RemittanceInformation struct {
+            Unstructured []string `json:"unstructured"`
+        } `json:"remittanceInformation"`
+    } `json:"creditTransferTransaction"`
+}
+    </div>
+
+    <!-- CONCLUSION -->
+    <div class="executive-callout" style="background: #ffffff; margin-top: 36px;">
+      <div class="callout-title">
+        <span>Strategic Recommendation for CM Payments B.V.</span>
+        <span class="callout-badge" style="background: #000000; color: #ffffff;">ACTION PLAN</span>
+      </div>
+      <ol style="margin-left: 20px; line-height: 1.8;">
+        <li><strong>Maintain Berlin Group Engine:</strong> Deploy immediate coverage for the Netherlands and Germany (~1,100 institutions across Sparkassen and Volksbanken with zero per-bank development).</li>
+        <li><strong>Develop Modular STET Adapter:</strong> Build <code>adapters/stet</code> inside the Go gateway. One adapter fulfills the requirements of all Top 6 French banking networks.</li>
+        <li><strong>Consolidated eIDAS Credentials:</strong> Retain a single QWAC/QSealC certificate pair from an accredited QTSP (e.g. QuoVadis or DigiCert) to satisfy both Berlin Group and STET security mandates.</li>
+      </ol>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="dossier-footer">
+    <div>CM PAYMENTS B.V. · FINANCIAL INFRASTRUCTURE &amp; PISP STRATEGY</div>
+    <div>PSD2 SERVICE 7 · DNB LICENSING DOSSIER</div>
+  </footer>
+
+</div>
+
+</body>
+</html>
