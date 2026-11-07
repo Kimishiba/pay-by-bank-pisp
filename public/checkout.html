@@ -1,1896 +1,1157 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Secure Checkout — Bloom &amp; Co</title>
-<!--
-  CM.com PSP — Hosted Checkout Page with Pay by Bank (PISP / A2A)
-  ================================================================
-  All styling is driven by CSS variables in the :root block below.
-  Merchants can override these via the Back Office to fully restyle
-  the page without touching markup. Drop in a new logo + background
-  via --merchant-logo and --merchant-background and the layout adapts.
-  
-  Compliant with WCAG 2.1 AA accessibility standards and high-converting
-  Pay by Bank UI requirements (DNB Licensed PISP - CM Payments B.V.).
--->
-<script>
-  /* Apply the merchant theme published from the back office.
-     Runs synchronously in <head> before any layout to avoid a FOUC.
-     Storage key is shared with backoffice.html. */
-  (function applyMerchantTheme() {
-    try {
-      var raw = localStorage.getItem('cm-checkout-theme');
-      if (!raw) return;
-      var t = JSON.parse(raw);
-      if (t && t.cssVars) {
-        Object.keys(t.cssVars).forEach(function (k) {
-          document.documentElement.style.setProperty(k, t.cssVars[k]);
-        });
-      }
-      if (t && t.merchantBg) {
-        document.documentElement.style.setProperty(
-          '--merchant-background', 'url("' + t.merchantBg + '")');
-      }
-      if (t && t.customCss) {
-        var s = document.createElement('style');
-        s.id = 'merchant-custom-css';
-        s.textContent = t.customCss;
-        document.addEventListener('DOMContentLoaded', function () {
-          document.head.appendChild(s);
-        });
-        if (document.head) document.head.appendChild(s);
-      }
-      if (t && t.merchantLogo) {
-        var swapLogo = function () {
-          var box = document.querySelector('.merchant-logo');
-          if (!box) return;
-          box.innerHTML = '<img src="' + t.merchantLogo + '" alt="Merchant logo" ' +
-            'style="height:100%;width:auto;display:block;object-fit:contain;">';
-        };
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', swapLogo);
-        } else {
-          swapLogo();
-        }
-      }
-    } catch (e) { /* swallow — fall back to default theme */ }
-  })();
-</script>
+<title>Secure Checkout — Amnesia Ibiza</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<script src="qrcode.min.js"></script>
 <style>
-  /* ============================================================
-     MERCHANT-CONFIGURABLE TOKENS
-     These are written by the back office. Everything else cascades
-     from these. Override these to re-skin the entire page.
-     ============================================================ */
-  :root {
-    /* Brand palette — generated from merchant logo by back office */
-    --brand-primary:      #2B6E62;
-    --brand-primary-hover:#1F5249;
-    --brand-secondary:    #E8B86D;
-    --brand-accent:       #F4E4D1;
-    --brand-on-primary:   #FFFFFF;
-
-    /* Surfaces & text */
-    --surface-card:       #FFFFFF;
-    --surface-muted:      #F7F5F1;
-    --border-subtle:      #E5E1DA;
-    --border-strong:      #CCD0D6;
-    --text-primary:       #1A1A1A;
-    --text-secondary:     #5B5B5B;
-    --text-muted:         #8A8A8A;
-
-    /* Status */
-    --success:            #00875A;
-    --success-light:      #E3FCEF;
-    --danger:             #C0392B;
-    --warning:            #FF8B00;
-
-    /* Merchant assets — replaced via back office */
-    --merchant-background: url('https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=2000&q=80');
-    --background-overlay: rgba(20, 30, 28, 0.55);
-
-    /* Typography */
-    --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    --font-body:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    --font-mono:    'JetBrains Mono', 'SF Mono', Consolas, monospace;
-
-    /* Geometry */
-    --radius-card:   20px;
-    --radius-input:  12px;
-    --radius-method: 14px;
-    --shadow-card:   0 24px 60px -20px rgba(0,0,0,0.35), 0 8px 16px -8px rgba(0,0,0,0.15);
-  }
-
-  /* ============================================================
-     RESET & PAGE
-     ============================================================ */
   *, *::before, *::after { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
     min-height: 100vh;
-    font-family: var(--font-body);
-    color: var(--text-primary);
-    background: var(--merchant-background) center/cover no-repeat fixed;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    line-height: 1.5;
-  }
-  body::before {
-    content: "";
-    position: fixed; inset: 0;
-    background: var(--background-overlay);
-    z-index: 0;
-    pointer-events: none;
-  }
-
-  /* ============================================================
-     LAYOUT
-     ============================================================ */
-  .page {
-    position: relative;
-    z-index: 1;
-    min-height: 100vh;
+    box-sizing: border-box;
+    padding: 48px 24px;
     display: flex;
     flex-direction: column;
-    padding: 32px 20px 48px;
-  }
-
-  .top-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    max-width: 1080px;
-    width: 100%;
-    margin: 0 auto 28px;
-    color: #FFFFFF;
-  }
-  .back-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    color: #FFFFFF;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    padding: 10px 16px;
-    border-radius: 999px;
-    background: rgba(255,255,255,0.12);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.18);
-    transition: background 0.2s ease, transform 0.2s ease;
-    cursor: pointer;
-  }
-  .back-link:hover { background: rgba(255,255,255,0.22); transform: translateX(-2px); }
-  .back-link svg { width: 16px; height: 16px; }
-
-  .secure-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    color: rgba(255,255,255,0.92);
-  }
-  .secure-badge svg { width: 16px; height: 16px; }
-
-  .checkout-shell {
-    width: 100%;
-    max-width: 520px;
-    margin: 0 auto;
-    background: var(--surface-card);
-    border-radius: var(--radius-card);
-    box-shadow: var(--shadow-card);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-  }
-
-  /* ============================================================
-     MERCHANT HEADER
-     ============================================================ */
-  .merchant-header {
-    padding: 30px 32px 22px;
-    text-align: center;
-    border-bottom: 1px solid var(--border-subtle);
-    background: linear-gradient(180deg, var(--brand-accent) 0%, var(--surface-card) 100%);
-  }
-  .merchant-logo {
-    display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 52px;
-    margin-bottom: 10px;
-  }
-  .merchant-logo svg { height: 100%; width: auto; }
-  .merchant-name {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    margin: 0;
+    gap: 20px;
+    background: #F5F5EF;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color: #20221F;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  /* ============================================================
-     ORDER SUMMARY
-     ============================================================ */
-  .order-summary {
-    padding: 20px 32px;
-    background: var(--surface-muted);
-  }
-  .order-meta {
+  a { color: #20221F; text-decoration: none; }
+  a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  a:focus-visible { outline: 2px solid #20221F; outline-offset: 3px; border-radius: 4px; }
+
+  /* Main Checkout Split Card */
+  .checkout-main-card {
+    width: 100%;
+    max-width: 1000px;
+    min-height: 700px;
+    box-sizing: border-box;
     display: flex;
-    justify-content: space-between;
+    flex-direction: row;
+    flex-wrap: wrap;
+    background: #FFFFFF;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(25,32,16,0.03), 0 20px 70px -16px rgba(25,32,16,0.16);
+  }
+
+  /* Left Column: Order Summary & Merchant Branding */
+  .col-summary {
+    flex: 1 1 360px;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 40px 36px 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    background: #FFFFFF;
+  }
+  .merchant-badge {
+    display: flex;
+    flex-direction: row;
     align-items: center;
-    font-size: 13px;
-    color: var(--text-secondary);
-    margin-bottom: 12px;
+    gap: 20px;
   }
-  .order-meta strong {
-    color: var(--text-primary);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-  }
-  .order-lines {
+  .merchant-logo-img {
+    width: 88px;
+    height: 88px;
+    flex-shrink: 0;
+    border-radius: 16px;
+    overflow: hidden;
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 14px;
-    padding-bottom: 14px;
-    border-bottom: 1px dashed var(--border-subtle);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   }
-  .order-line {
-    display: flex;
-    justify-content: space-between;
-    font-size: 13.5px;
-    color: var(--text-secondary);
+  .merchant-logo-img img {
+    width: 88px;
+    height: 88px;
+    object-fit: cover;
+    display: block;
   }
-  .order-line span:last-child {
-    color: var(--text-primary);
-    font-variant-numeric: tabular-nums;
-  }
-  .order-total {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-  }
-  .order-total .label {
-    font-size: 14px;
-    color: var(--text-secondary);
-    font-weight: 500;
-  }
-  .order-total .amount {
+  .merchant-title {
+    margin: 0;
     font-size: 26px;
+    line-height: 1.2;
     font-weight: 700;
-    color: var(--text-primary);
-    font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
+    color: #20221F;
   }
-  .order-total .currency {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin-right: 4px;
-  }
-
-  /* ============================================================
-     PAYMENT METHODS VIEW
-     ============================================================ */
-  .payment-section {
-    padding: 26px 32px 32px;
-  }
-  .payment-heading {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0 0 4px;
-  }
-  .payment-subheading {
+  .merchant-sub {
     font-size: 13px;
-    color: var(--text-muted);
-    margin: 0 0 18px;
+    line-height: 1.4;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: #797C74;
   }
 
-  .payment-methods {
+  .order-heading {
+    margin: 0;
+    font-size: 24px;
+    line-height: 1.4;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: #20221F;
+  }
+  .order-meta-info {
     display: flex;
     flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    line-height: 1.4;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: #797C74;
+    margin-top: 6px;
+  }
+  .order-meta-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .price-display {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
     gap: 10px;
   }
-  .pm {
+  .price-amount {
+    font-size: 40px;
+    line-height: 1.4;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    color: #20221F;
+  }
+  .price-currency {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: #797C74;
+  }
+  .items-desc {
+    font-size: 13px;
+    line-height: 1.4;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: #797C74;
+  }
+
+  /* Right Column: Payment Interactive Pane */
+  .col-payment {
+    flex: 1 1 480px;
+    min-width: 0;
+    box-sizing: border-box;
+    border-left: 1px solid #ECEDE7;
+    display: flex;
+    flex-direction: column;
+    background: #FFFFFF;
+  }
+  .col-payment-body {
+    flex-grow: 1;
+    box-sizing: border-box;
+    padding: 36px 32px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Express checkout bar */
+  .xp-label {
+    font-size: 13px;
+    line-height: 1.4;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: #797C74;
+  }
+  .xp-row {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+  }
+  .xp-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 48px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: filter 150ms ease, transform 100ms ease;
+  }
+  .xp-btn:hover { filter: brightness(0.96); transform: translateY(-1px); }
+  .xp-btn:focus-visible { outline: 2px solid #20221F; outline-offset: 2px; }
+  .xp-apple { background: #191B18; }
+  .xp-paypal { background: #FFC439; }
+  .xp-gpay { background: #FFFFFF; border: 1px solid #E3E4DE; }
+
+  /* Divider */
+  .divider-row {
     display: flex;
     align-items: center;
     gap: 14px;
-    padding: 14px 16px;
-    background: var(--surface-card);
-    border: 1.5px solid var(--border-subtle);
-    border-radius: var(--radius-method);
+    margin: 8px 0 6px;
+    color: #797C74;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .divider-line {
+    flex-grow: 1;
+    height: 1px;
+    background: #ECEDE7;
+  }
+
+  .methods-avail-count {
+    align-self: flex-end;
+    font-size: 13px;
+    line-height: 1.4;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: #797C74;
+  }
+
+  /* Scrollable Payment Method Grid */
+  .plist {
+    max-height: 340px;
+    overflow-y: auto;
+    padding: 0 4px 0 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    align-content: start;
+    scrollbar-width: thin;
+    scrollbar-color: #8A8D85 transparent;
+  }
+  .plist::-webkit-scrollbar { width: 6px; }
+  .plist::-webkit-scrollbar-track { background: transparent; }
+  .plist::-webkit-scrollbar-thumb { background: #8A8D85; border-radius: 3px; }
+
+  /* Method Tile */
+  .tile {
+    min-width: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: #FFFFFF;
+    border: 1px solid #E3E4DE;
+    border-radius: 10px;
     cursor: pointer;
-    transition: border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
-    width: 100%;
     font-family: inherit;
     text-align: left;
-    min-height: 58px;
+    color: #20221F;
+    transition: border-color 150ms ease, box-shadow 150ms ease, transform 100ms ease;
   }
-  .pm:hover {
-    border-color: var(--brand-primary);
+  .tile:hover {
+    border-color: #CFD1CA;
     transform: translateY(-1px);
-    box-shadow: 0 6px 16px -8px rgba(0,0,0,0.15);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   }
-  .pm:focus-visible {
-    outline: none;
-    border-color: var(--brand-primary);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-primary) 22%, transparent);
+  .tile:focus-visible { outline: 2px solid #20221F; outline-offset: 2px; }
+  .tile.selected {
+    border-color: #20221F;
+    box-shadow: 0 0 0 1px #20221F;
   }
-  .pm-icon {
-    width: 44px;
-    height: 30px;
+
+  .tile-icon-box {
+    width: 36px;
+    height: 36px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    border-radius: 7px;
+    overflow: hidden;
+    background: #F5F6F1;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
-    border-radius: 6px;
-    background: #FAFAFA;
-    border: 1px solid var(--border-subtle);
-    overflow: hidden;
   }
-  .pm-icon svg { max-width: 100%; max-height: 100%; }
-  .pm-body { flex: 1; min-width: 0; }
-  .pm-name {
+  .tile-icon-box svg { display: block; }
+  .tile-icon-box img { max-width: 100%; max-height: 100%; display: block; object-fit: contain; }
+
+  .tile-body {
+    flex-grow: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .tile-name {
     font-size: 14px;
+    line-height: 1.4;
     font-weight: 600;
-    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    color: #20221F;
     margin: 0;
   }
-  .pm-desc {
+  .tile-desc {
     font-size: 12px;
-    color: var(--text-muted);
-    margin: 2px 0 0;
+    line-height: 1.3;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: #797C74;
+    overflow-wrap: anywhere;
+    margin: 0;
   }
-  .pm-arrow {
-    color: var(--text-muted);
-    transition: transform 0.2s ease, color 0.2s ease;
-    flex-shrink: 0;
-  }
-  .pm:hover .pm-arrow { transform: translateX(3px); color: var(--brand-primary); }
 
-  /* Recommended method gets brand accent */
-  .pm.recommended {
-    border-color: var(--brand-primary);
-    background: color-mix(in srgb, var(--brand-primary) 4%, var(--surface-card));
-    position: relative;
+  .scroll-notice {
+    box-sizing: border-box;
+    padding: 10px 16px;
+    border-radius: 10px;
+    background: #F5F5EF;
+    text-align: center;
+    font-size: 13px;
+    line-height: 1.4;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: #797C74;
+    margin-top: 4px;
   }
-  .badge-tag {
-    display: inline-block;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 7px;
-    border-radius: 4px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+
+  /* Navy Footer Bar */
+  .secured-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 18px 32px;
+    background: #0D314B;
+    color: #FFFFFF;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
   }
-  .badge-tag.rec {
-    background: var(--brand-primary);
-    color: var(--brand-on-primary);
-  }
-  .badge-tag.instant {
-    background: #EBF8FF;
-    color: #0070BA;
-    border: 1px solid #BAE3FF;
-  }
-  .badge-tag.used {
-    background: #FEF3C7;
-    color: #92400E;
-    border: 1px solid #FDE68A;
+  .secured-bar img { height: 18px; width: auto; display: block; }
+
+  /* Bottom Design Preview Footnote */
+  .design-preview-text {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: #797C74;
   }
 
   /* ============================================================
-     PAY BY BANK ENGINE & MULTI-STATE CONTAINER
+     PAY BY BANK INTERACTIVE FLOW (INSIDE RIGHT COLUMN)
      ============================================================ */
-  .pbb-section {
-    padding: 24px 32px 32px;
-    display: flex;
+  .pbb-flow-container {
+    display: none;
     flex-direction: column;
-    gap: 18px;
-    animation: fadeIn 0.25s ease-out;
+    gap: 16px;
+    animation: fadeIn 180ms ease-out;
   }
 
-  /* Navigation Header inside PBB */
-  .pbb-nav-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-  .pbb-back-btn {
+  .back-to-methods-btn {
+    align-self: flex-start;
     display: inline-flex;
     align-items: center;
     gap: 6px;
     font-size: 13px;
-    font-weight: 600;
-    color: var(--brand-primary);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: #797C74;
     background: transparent;
     border: none;
     cursor: pointer;
-    padding: 6px 0;
+    padding: 4px 0;
     border-radius: 4px;
-    transition: color 0.15s ease;
   }
-  .pbb-back-btn:hover { color: var(--brand-primary-hover); text-decoration: underline; }
-  .pbb-back-btn svg { width: 14px; height: 14px; }
+  .back-to-methods-btn:hover { color: #20221F; text-decoration: underline; }
 
-  .pbb-dnb-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    background: var(--surface-muted);
-    border: 1px solid var(--border-subtle);
+  .pbb-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .pbb-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #20221F;
+  }
+  .pbb-sub {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #797C74;
+    letter-spacing: -0.01em;
+  }
+  .pbb-dnb-badge {
+    background: #F5F5EF;
+    border: 1px solid #E3E4DE;
     padding: 4px 8px;
     border-radius: 6px;
-  }
-
-  /* Stepper Progress Bar */
-  .pbb-stepper {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: relative;
-    padding: 0 4px;
-    margin-bottom: 4px;
-  }
-  .pbb-stepper::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 20px;
-    right: 20px;
-    height: 2px;
-    background: var(--border-subtle);
-    z-index: 0;
-    transform: translateY(-50%);
-  }
-  .pbb-step-item {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    background: var(--surface-card);
-    padding: 0 6px;
-  }
-  .pbb-step-dot {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: var(--surface-muted);
-    border: 2px solid var(--border-subtle);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-muted);
-    transition: all 0.25s ease;
-  }
-  .pbb-step-label {
     font-size: 11px;
     font-weight: 600;
-    color: var(--text-muted);
-  }
-  .pbb-step-item.active .pbb-step-dot {
-    background: var(--brand-primary);
-    border-color: var(--brand-primary);
-    color: var(--brand-on-primary);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 20%, transparent);
-  }
-  .pbb-step-item.active .pbb-step-label {
-    color: var(--brand-primary);
-    font-weight: 700;
-  }
-  .pbb-step-item.completed .pbb-step-dot {
-    background: var(--success);
-    border-color: var(--success);
-    color: #FFFFFF;
-  }
-  .pbb-step-item.completed .pbb-step-label {
-    color: var(--success);
+    color: #555850;
+    white-space: nowrap;
   }
 
-  /* Consumer Trust Reassurance Box */
-  .pbb-guarantee-box {
-    background: color-mix(in srgb, var(--brand-primary) 5%, #FFFFFF);
-    border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, #E5E1DA);
-    border-radius: var(--radius-input);
-    padding: 12px 14px;
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    font-size: 12.5px;
-    color: var(--text-secondary);
-    line-height: 1.45;
-  }
-  .pbb-guarantee-icon {
-    width: 22px;
-    height: 22px;
-    color: var(--brand-primary);
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
-  .pbb-guarantee-box strong {
-    color: var(--text-primary);
-  }
-
-  /* Tier A: Preferred / Recent Bank Card */
-  .pbb-preferred-block {
-    background: #FFFBEB;
-    border: 1.5px solid #FCD34D;
-    border-radius: var(--radius-method);
-    padding: 12px 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-  .pbb-preferred-block:hover {
-    border-color: #F59E0B;
-    background: #FEF3C7;
-    transform: translateY(-1px);
-  }
-  .pbb-pref-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .pbb-pref-title {
-    font-size: 13px;
-    font-weight: 700;
-    color: #92400E;
-    margin: 0;
-  }
-  .pbb-pref-sub {
-    font-size: 11.5px;
-    color: #B45309;
-    margin: 0;
-  }
-
-  /* Tier C: Search & Filter Tools */
-  .pbb-search-wrapper {
-    position: relative;
+  .pbb-search-field {
     width: 100%;
+    height: 48px;
+    box-sizing: border-box;
+    padding: 0 14px;
+    border: 1px solid #E3E4DE;
+    border-radius: 10px;
+    font: 500 14px/1 'Inter', system-ui, sans-serif;
+    letter-spacing: -0.01em;
+    color: #20221F;
+    background: #FFFFFF;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
   }
-  .pbb-search-icon {
-    position: absolute;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-muted);
-    width: 16px;
-    height: 16px;
-    pointer-events: none;
-  }
-  .pbb-search-input {
-    width: 100%;
-    padding: 12px 14px 12px 40px;
-    border: 1.5px solid var(--border-subtle);
-    border-radius: var(--radius-input);
-    font-family: inherit;
-    font-size: 14px;
-    color: var(--text-primary);
-    background: var(--surface-card);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  }
-  .pbb-search-input:focus {
+  .pbb-search-field:focus {
     outline: none;
-    border-color: var(--brand-primary);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 18%, transparent);
+    border-color: #20221F;
+    box-shadow: 0 0 0 3px rgba(32,34,31,0.08);
   }
-  .pbb-search-input::placeholder { color: var(--text-muted); }
 
-  /* Country Filter Tabs */
-  .pbb-country-tabs {
+  .pbb-tabs {
     display: flex;
     gap: 6px;
-    overflow-x: auto;
-    padding-bottom: 2px;
+    margin-top: -6px;
   }
-  .pbb-tab-btn {
-    border: 1px solid var(--border-subtle);
-    background: var(--surface-muted);
-    color: var(--text-secondary);
-    border-radius: 999px;
-    padding: 4px 12px;
+  .pbb-tab {
+    padding: 5px 12px;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 500;
+    border-radius: 999px;
+    border: 1px solid #E3E4DE;
+    background: #F5F5EF;
+    color: #797C74;
     cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.15s ease;
   }
-  .pbb-tab-btn:hover { background: #EAE6DF; }
-  .pbb-tab-btn.active {
-    background: var(--brand-primary);
-    color: var(--brand-on-primary);
-    border-color: var(--brand-primary);
-  }
-
-  /* Tier B: Bank Quick-Select Grid */
-  .pbb-bank-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    max-height: 280px;
-    overflow-y: auto;
-    padding-right: 2px;
-  }
-  .pbb-bank-card {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
-    border: 1.5px solid var(--border-subtle);
-    border-radius: var(--radius-method);
-    background: var(--surface-card);
-    cursor: pointer;
-    transition: all 0.15s ease;
-    text-align: left;
-    min-height: 60px;
-    position: relative;
-    font-family: inherit;
-  }
-  .pbb-bank-card:hover {
-    border-color: var(--brand-primary);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px -4px rgba(0,0,0,0.1);
-  }
-  .pbb-bank-card:focus-visible {
-    outline: none;
-    border-color: var(--brand-primary);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 22%, transparent);
-  }
-  .pbb-bank-card.selected {
-    border-color: var(--brand-primary);
-    background: color-mix(in srgb, var(--brand-primary) 7%, var(--surface-card));
-    box-shadow: 0 0 0 1px var(--brand-primary);
-  }
-  .pbb-bank-logo {
-    width: 38px;
-    height: 38px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    background: #FAFAFA;
-    border: 1px solid var(--border-subtle);
-    overflow: hidden;
-  }
-  .pbb-bank-logo svg { width: 100%; height: 100%; }
-  .pbb-bank-info {
-    flex: 1;
-    min-width: 0;
-  }
-  .pbb-bank-name {
-    font-size: 13.5px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .pbb-bank-sub {
-    font-size: 11px;
-    color: var(--text-muted);
-    margin: 1px 0 0;
-  }
-  .pbb-check-badge {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: var(--brand-primary);
+  .pbb-tab.active {
+    background: #20221F;
     color: #FFFFFF;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-  }
-  .pbb-bank-card.selected .pbb-check-badge {
-    display: flex;
+    border-color: #20221F;
   }
 
-  /* Empty Search State */
-  .pbb-empty-state {
-    padding: 24px 16px;
-    text-align: center;
-    background: var(--surface-muted);
-    border: 1px dashed var(--border-subtle);
-    border-radius: var(--radius-input);
-    font-size: 13px;
-    color: var(--text-secondary);
+  .pbb-bank-list {
+    max-height: 250px;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: #8A8D85 transparent;
   }
 
-  /* Primary Action CTA */
-  .pbb-primary-cta {
+  .btn-pay-action {
     width: 100%;
-    padding: 15px 20px;
-    background: var(--brand-primary);
-    color: var(--brand-on-primary);
-    font-size: 15px;
-    font-weight: 700;
-    border: none;
-    border-radius: var(--radius-input);
-    cursor: pointer;
-    transition: background 0.2s ease, transform 0.15s ease, opacity 0.2s ease;
+    height: 48px;
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    min-height: 52px;
+    background: #191B18;
+    color: #FFFFFF;
+    border: 0;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter 150ms ease, transform 100ms ease;
+    margin-top: 4px;
   }
-  .pbb-primary-cta:hover:not(:disabled) {
-    background: var(--brand-primary-hover);
+  .btn-pay-action:hover:not(:disabled) {
+    filter: brightness(1.2);
     transform: translateY(-1px);
   }
-  .pbb-primary-cta:disabled {
-    opacity: 0.5;
+  .btn-pay-action:disabled {
+    opacity: 0.45;
     cursor: not-allowed;
   }
 
-  /* ============================================================
-     STATE 2: SCA HANDOFF SCREEN (QR CODE & APP LINK)
-     ============================================================ */
-  .pbb-handoff-box {
-    display: flex;
+  /* SCA QR Handoff Pane */
+  .pbb-handoff-pane {
+    display: none;
     flex-direction: column;
     align-items: center;
     text-align: center;
     gap: 16px;
+    animation: fadeIn 180ms ease-out;
   }
-  .pbb-qr-card {
+  .pbb-qr-wrapper {
     background: #FFFFFF;
     padding: 16px;
     border-radius: 16px;
-    border: 2px solid var(--border-subtle);
-    box-shadow: 0 10px 25px -10px rgba(0,0,0,0.12);
+    border: 1px solid #E3E4DE;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    width: 190px;
+    height: 190px;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 200px;
-    height: 200px;
     margin: 4px auto;
   }
-  .pbb-qr-card svg {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
+  .pbb-qr-wrapper svg { width: 100%; height: 100%; display: block; }
 
-  .pbb-radar-pulse {
+  .radar-status {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     font-size: 12.5px;
     font-weight: 600;
-    color: var(--brand-primary);
-    background: color-mix(in srgb, var(--brand-primary) 8%, #FFFFFF);
+    color: #0D314B;
+    background: #EAF2F8;
     padding: 6px 14px;
     border-radius: 999px;
-    border: 1px solid color-mix(in srgb, var(--brand-primary) 20%, transparent);
   }
-  .pbb-dot-pulse {
+  .dot-blink {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--brand-primary);
-    animation: blink 1.4s infinite ease-in-out;
+    background: #0070BA;
+    animation: blink 1.3s infinite ease-in-out;
   }
-  @keyframes blink {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.3; transform: scale(0.7); }
-  }
+  @keyframes blink { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.3;transform:scale(0.7);} }
 
-  .pbb-sandbox-card {
-    background: #111827;
-    color: #F9FAFB;
-    border-radius: var(--radius-input);
-    padding: 14px 16px;
+  .sim-box {
+    background: #F9FAFB;
+    border: 1px dashed #D1D5DB;
+    border-radius: 10px;
+    padding: 12px 14px;
     width: 100%;
     text-align: left;
-    box-shadow: 0 8px 20px -6px rgba(0,0,0,0.25);
+    margin-top: 6px;
   }
-  .pbb-sandbox-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 11px;
-    font-weight: 700;
-    color: #9CA3AF;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 8px;
-  }
-  .pbb-sim-btn {
+  .sim-btn {
     background: #10B981;
-    color: #064E3B;
+    color: #FFFFFF;
     border: none;
     border-radius: 8px;
-    padding: 10px 14px;
+    padding: 9px 12px;
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 600;
     width: 100%;
     cursor: pointer;
-    transition: all 0.15s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
+    margin-top: 6px;
   }
-  .pbb-sim-btn:hover {
-    background: #34D399;
-    transform: translateY(-1px);
-  }
+  .sim-btn:hover { background: #059669; }
 
-  /* ============================================================
-     STATE 4: SETTLEMENT CONFIRMED / SUCCESS RECEIPT
-     ============================================================ */
-  .pbb-success-box {
-    display: flex;
+  /* Success Receipt Pane */
+  .pbb-success-pane {
+    display: none;
     flex-direction: column;
     align-items: center;
     text-align: center;
     gap: 16px;
-    animation: fadeIn 0.3s ease-out;
+    animation: fadeIn 200ms ease-out;
   }
-  .pbb-check-circle {
-    width: 64px;
-    height: 64px;
+  .check-green-circle {
+    width: 58px;
+    height: 58px;
     border-radius: 50%;
     background: #E3FCEF;
-    border: 2px solid #57D9A3;
+    border: 1.5px solid #57D9A3;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #00875A;
   }
-  .pbb-check-circle svg { width: 34px; height: 34px; }
-  .pbb-receipt-card {
+  .receipt-table {
     width: 100%;
-    background: var(--surface-muted);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-input);
+    background: #F5F5EF;
+    border-radius: 12px;
     padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    text-align: left;
+    gap: 8px;
     font-size: 13px;
+    text-align: left;
   }
-  .pbb-receipt-row {
+  .receipt-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
-  .pbb-receipt-row .label { color: var(--text-muted); }
-  .pbb-receipt-row .value {
-    color: var(--text-primary);
-    font-weight: 600;
-    font-family: var(--font-mono);
-    font-size: 12px;
-  }
-
-  /* ============================================================
-     FOOTER
-     ============================================================ */
-  .checkout-footer {
-    padding: 16px 32px 24px;
-    border-top: 1px solid var(--border-subtle);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    font-size: 11.5px;
-    color: var(--text-muted);
-    text-align: center;
-  }
-  .checkout-footer .brand-line {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .checkout-footer svg { width: 14px; height: 14px; }
-  .checkout-footer .cm-mark {
-    font-weight: 700;
-    color: var(--text-secondary);
-    letter-spacing: 0.02em;
-  }
+  .receipt-row .k { color: #797C74; }
+  .receipt-row .v { font-weight: 600; color: #20221F; }
 
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
+    from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
-  /* ============================================================
-     RESPONSIVE
-     ============================================================ */
-  @media (max-width: 560px) {
-    .page { padding: 16px 12px 28px; }
-    .top-bar { margin-bottom: 16px; }
-    .secure-badge .label { display: none; }
-    .merchant-header { padding: 24px 20px 18px; }
-    .order-summary, .payment-section, .pbb-section { padding-left: 20px; padding-right: 20px; }
-    .checkout-footer { padding-left: 20px; padding-right: 20px; }
-    .order-total .amount { font-size: 24px; }
-    .pbb-bank-grid { grid-template-columns: 1fr; }
+  @media (max-width: 780px) {
+    body { padding: 16px 12px; }
+    .col-payment { border-left: 0; border-top: 1px solid #ECEDE7; }
+    .plist, .pbb-bank-list { grid-template-columns: 1fr; }
+    .col-summary { padding: 28px 24px; }
+    .col-payment-body { padding: 28px 24px; }
   }
 </style>
-<!-- Load pure JS QR Code generator locally -->
-<script src="qrcode.min.js"></script>
 </head>
 <body>
-<div class="page">
 
-  <!-- ============ TOP BAR ============ -->
-  <header class="top-bar">
-    <a class="back-link" id="global-back-link" href="#cart" aria-label="Go back to shopping cart">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
-      <span id="global-back-text">Back to cart</span>
-    </a>
-    <span class="secure-badge">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-      <span class="label">Secure checkout</span>
-    </span>
-  </header>
-
-  <!-- ============ CHECKOUT CARD SHELL ============ -->
-  <main class="checkout-shell" role="main" aria-labelledby="merchant-name">
+  <!-- ============ SPLIT CARD ============ -->
+  <main class="checkout-main-card" role="main" aria-label="Amnesia Ibiza Checkout">
     
-    <!-- Merchant Header (Logo + Brand Name) -->
-    <section class="merchant-header">
-      <div class="merchant-logo" aria-hidden="true">
-        <!-- Default sample merchant logo: Bloom & Co Florists -->
-        <svg viewBox="0 0 200 56" xmlns="http://www.w3.org/2000/svg">
-          <g fill="var(--brand-primary)">
-            <path d="M28 8c5 0 9 2 11 6-3-1-6-1-9 0 1 3 3 5 6 6-3 2-7 2-10 0-1 4 0 8 3 11-5 0-9-3-11-7-2 4-1 9 2 12-5-1-9-5-10-10-3 3-5 7-4 12-3-4-3-9-1-13-4 1-8 4-9 9-1-5 1-11 5-14-4-1-9 0-12 4 2-5 7-9 13-9-3-3-7-4-12-3 4-4 10-5 15-3-1-4-4-7-8-8 5-1 11 1 14 5 0-5 3-9 8-11-1 5 1 10 5 12 2-5 6-8 11-9-2 4-2 9 0 13z"/>
-          </g>
-          <text x="62" y="36" font-family="Georgia, serif" font-size="24" font-weight="700" fill="var(--text-primary)" letter-spacing="-0.5">Bloom &amp; Co</text>
-        </svg>
+    <!-- LEFT COLUMN: Order Details & Amnesia Ibiza Branding -->
+    <section class="col-summary">
+      <div class="merchant-badge">
+        <div class="merchant-logo-img" role="img" aria-label="Amnesia Ibiza logo">
+          <img src="assets/amnesia.png" alt="Amnesia Ibiza">
+        </div>
+        <div style="display:flex; flex-direction:column; gap:3px; min-width:0;">
+          <h1 class="merchant-title">Amnesia Ibiza</h1>
+          <span class="merchant-sub">amnesia.es</span>
+        </div>
       </div>
-      <h1 class="merchant-name" id="merchant-name">Bloom &amp; Co · Florists</h1>
-    </section>
 
-    <!-- Order Summary -->
-    <section class="order-summary" aria-label="Order summary">
-      <div class="order-meta">
-        <span>Order <strong>#BC-208451</strong></span>
-        <span>20 May 2026</span>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <h2 class="order-heading">Complete your payment</h2>
+        <div class="order-meta-info">
+          <div class="order-meta-row"><span>Date</span><span>7 November 2026, 14:32</span></div>
+          <div class="order-meta-row"><span>Order reference</span><span style="font-weight:600; color:#20221F;">AMN-2026-08421</span></div>
+        </div>
       </div>
-      <div class="order-lines">
-        <div class="order-line"><span>Spring Bouquet · Medium</span><span>€ 34.50</span></div>
-        <div class="order-line"><span>Ceramic vase · Sand</span><span>€ 19.95</span></div>
-        <div class="order-line"><span>Same-day delivery</span><span>€ 7.50</span></div>
-      </div>
-      <div class="order-total">
-        <span class="label">Total to pay</span>
-        <span><span class="currency">€</span><span class="amount" id="checkout-amount-display">61.95</span></span>
+
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div class="price-display">
+          <span class="price-amount">€120.00</span>
+          <span class="price-currency">EUR</span>
+        </div>
+        <span class="items-desc">2 × General admission · All fees included</span>
       </div>
     </section>
 
-    <!-- ============================================================
-         VIEW 0: MAIN PAYMENT METHODS LIST
-         ============================================================ -->
-    <section class="payment-section" id="section-payment-methods" aria-label="Choose a payment method">
-      <h2 class="payment-heading">Choose how to pay</h2>
-      <p class="payment-subheading">Select your preferred payment method. Pay by Bank provides instant, fee-free transfer.</p>
-
-      <div class="payment-methods" role="list">
-
-        <!-- ⭐ PAY BY BANK (Direct Bank Transfer via CM Payments PISP) -->
-        <button class="pm recommended" id="pm-pay-by-bank" role="listitem" type="button" aria-label="Pay with Pay by Bank - Direct Account-to-Account Instant Transfer">
-          <span class="pm-icon" style="background:#FFF7ED; border-color:#FED7AA;">
-            <!-- Bank wire vector icon -->
-            <svg viewBox="0 0 44 30" xmlns="http://www.w3.org/2000/svg">
-              <rect width="44" height="30" rx="3" fill="#EA580C"/>
-              <path d="M22 6L9 12V14H35V12L22 6Z" fill="#FFFFFF"/>
-              <rect x="12" y="15" width="3" height="7" fill="#FFFFFF"/>
-              <rect x="18" y="15" width="3" height="7" fill="#FFFFFF"/>
-              <rect x="24" y="15" width="3" height="7" fill="#FFFFFF"/>
-              <rect x="30" y="15" width="3" height="7" fill="#FFFFFF"/>
-              <rect x="9" y="23" width="26" height="2" fill="#FFFFFF"/>
-            </svg>
-          </span>
-          <span class="pm-body">
-            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-              <p class="pm-name">Pay by Bank</p>
-              <span class="badge-tag instant">Instant A2A</span>
-              <span class="badge-tag rec">Recommended</span>
-            </div>
-            <p class="pm-desc">Direct bank transfer • No card surcharges • 100% encrypted</p>
-          </span>
-          <svg class="pm-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-        </button>
-
-        <!-- iDEAL | WERO -->
-        <button class="pm" role="listitem" type="button" aria-label="Pay with iDEAL or WERO" onclick="alert('Demo: Click Pay by Bank above to experience the direct bank checkout flow.')">
-          <span class="pm-icon">
-            <svg viewBox="0 0 44 30" xmlns="http://www.w3.org/2000/svg">
-              <rect width="44" height="30" rx="3" fill="#FFFFFF"/>
-              <text x="11" y="14" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" font-weight="700" fill="#CC0066">i</text>
-              <text x="11" y="23" text-anchor="middle" font-family="Arial, sans-serif" font-size="6" font-weight="700" fill="#0A0B09">DEAL</text>
-              <line x1="22" y1="6" x2="22" y2="24" stroke="#E0E0E0" stroke-width="1"/>
-              <rect x="24" y="9" width="16" height="12" rx="2" fill="#5B2D8C"/>
-              <text x="32" y="18" text-anchor="middle" font-family="Arial, sans-serif" font-size="6.5" font-weight="800" fill="#FFFFFF" letter-spacing="0.3">wero</text>
-            </svg>
-          </span>
-          <span class="pm-body">
-            <p class="pm-name">iDEAL | WERO</p>
-            <p class="pm-desc">Pay directly from your European bank account</p>
-          </span>
-          <svg class="pm-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-        </button>
-
-        <!-- Credit Card -->
-        <button class="pm" role="listitem" type="button" aria-label="Pay with credit card" onclick="alert('Demo: Click Pay by Bank above to experience the direct bank checkout flow.')">
-          <span class="pm-icon">
-            <svg viewBox="0 0 44 30" xmlns="http://www.w3.org/2000/svg">
-              <rect width="44" height="30" rx="3" fill="#1A1F71"/>
-              <circle cx="18" cy="15" r="6" fill="#EB001B" opacity="0.95"/>
-              <circle cx="26" cy="15" r="6" fill="#F79E1B" opacity="0.95"/>
-            </svg>
-          </span>
-          <span class="pm-body">
-            <p class="pm-name">Credit or debit card</p>
-            <p class="pm-desc">Visa, Mastercard, American Express</p>
-          </span>
-          <svg class="pm-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-        </button>
-
-        <!-- PayPal -->
-        <button class="pm" role="listitem" type="button" aria-label="Pay with PayPal" onclick="alert('Demo: Click Pay by Bank above to experience the direct bank checkout flow.')">
-          <span class="pm-icon">
-            <svg viewBox="0 0 44 30" xmlns="http://www.w3.org/2000/svg">
-              <rect width="44" height="30" rx="3" fill="#FFFFFF"/>
-              <text x="22" y="19" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="800" fill="#003087">Pay<tspan fill="#009CDE">Pal</tspan></text>
-            </svg>
-          </span>
-          <span class="pm-body">
-            <p class="pm-name">PayPal</p>
-            <p class="pm-desc">Pay with your PayPal balance or linked card</p>
-          </span>
-          <svg class="pm-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-        </button>
-
-        <!-- Bancontact -->
-        <button class="pm" role="listitem" type="button" aria-label="Pay with Bancontact" onclick="alert('Demo: Click Pay by Bank above to experience the direct bank checkout flow.')">
-          <span class="pm-icon">
-            <svg viewBox="0 0 44 30" xmlns="http://www.w3.org/2000/svg">
-              <rect width="44" height="30" rx="3" fill="#FFFFFF"/>
-              <rect x="6" y="9" width="14" height="12" rx="2" fill="#005498"/>
-              <rect x="24" y="9" width="14" height="12" rx="2" fill="#FFD800"/>
-            </svg>
-          </span>
-          <span class="pm-body">
-            <p class="pm-name">Bancontact</p>
-            <p class="pm-desc">Belgium's most-used payment method</p>
-          </span>
-          <svg class="pm-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-        </button>
-
-        <!-- Apple Pay -->
-        <button class="pm" role="listitem" type="button" aria-label="Pay with Apple Pay" onclick="alert('Demo: Click Pay by Bank above to experience the direct bank checkout flow.')">
-          <span class="pm-icon">
-            <svg viewBox="0 0 44 30" xmlns="http://www.w3.org/2000/svg">
-              <rect width="44" height="30" rx="3" fill="#000000"/>
-              <text x="22" y="19" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="9" font-weight="600" fill="#FFFFFF">&#xF8FF; Pay</text>
-            </svg>
-          </span>
-          <span class="pm-body">
-            <p class="pm-name">Apple Pay</p>
-            <p class="pm-desc">Pay quickly with Touch ID or Face ID</p>
-          </span>
-          <svg class="pm-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-        </button>
-
-      </div>
-    </section>
-
-    <!-- ============================================================
-         PAY BY BANK FLOW (PISP ENGINE)
-         ============================================================ -->
-    <section class="pbb-section" id="section-pay-by-bank" style="display:none;" aria-label="Pay by Bank - Direct Account-to-Account Transfer">
+    <!-- RIGHT COLUMN: Payment Method Selection & Pay by Bank Flow -->
+    <section class="col-payment">
       
-      <!-- Top Navigation & Regulatory Pill -->
-      <div class="pbb-nav-header">
-        <button type="button" class="pbb-back-btn" id="pbb-back-btn" aria-label="Return to payment methods selection">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
-          <span>All payment methods</span>
-        </button>
-        <span class="pbb-dnb-pill">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          DNB Supervised (R129862)
-        </span>
-      </div>
-
-      <!-- Stepper Indicator -->
-      <div class="pbb-stepper" aria-label="Payment progress">
-        <div class="pbb-step-item active" id="step-node-1">
-          <div class="pbb-step-dot">1</div>
-          <span class="pbb-step-label">Select Bank</span>
-        </div>
-        <div class="pbb-step-item" id="step-node-2">
-          <div class="pbb-step-dot">2</div>
-          <span class="pbb-step-label">Approve</span>
-        </div>
-        <div class="pbb-step-item" id="step-node-3">
-          <div class="pbb-step-dot">3</div>
-          <span class="pbb-step-label">Settled</span>
-        </div>
-      </div>
-
-      <!-- Consumer Trust Reassurance Banner -->
-      <div class="pbb-guarantee-box">
-        <svg class="pbb-guarantee-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
-        </svg>
-        <div>
-          <strong>Direct transfer from your bank account.</strong>
-          <div>Zero card surcharges. 100% encrypted via PSD2 open banking rails. We never see or store your credentials.</div>
-        </div>
-      </div>
-
-      <!-- ------------------------------------------------------------
-           SUB-STATE 1: BANK SELECTION & SEARCH
-           ------------------------------------------------------------ -->
-      <div id="pbb-view-select" style="display:flex; flex-direction:column; gap:14px;">
+      <!-- SUB-PANE 1: Standard Payment Methods List (Identical to Screenshot) -->
+      <div class="col-payment-body" id="pane-methods">
+        <span class="xp-label">Express checkout</span>
         
-        <!-- Tier A: Preferred / Recently Used Bank -->
-        <div id="pbb-tier-a-container" style="display:none;"></div>
+        <div class="xp-row">
+          <!-- Apple Pay -->
+          <button type="button" class="xp-btn xp-apple" aria-label="Pay with Apple Pay">
+            <svg height="38" viewBox="0 0 109 70" aria-hidden="true" style="display:block;"><g fill="#FFFFFF"><path d="M30.36,23.61a6.09,6.09,0,0,0,1.39-4.3,6,6,0,0,0-4,2.05,5.63,5.63,0,0,0-1.42,4.13,5,5,0,0,0,4-1.88"></path><path d="M31.73,25.79C29.52,25.66,27.64,27,26.59,27s-2.67-1.18-4.42-1.15a6.53,6.53,0,0,0-5.54,3.36c-2.37,4.09-.62,10.16,1.69,13.49,1.12,1.65,2.47,3.46,4.25,3.4s2.34-1.09,4.38-1.09,2.64,1.09,4.42,1.05,3-1.65,4.12-3.3A14.48,14.48,0,0,0,37.33,39a6,6,0,0,1-3.59-5.44,6.1,6.1,0,0,1,2.9-5.11,6.33,6.33,0,0,0-4.91-2.67"></path><path d="M51,21.19a7.76,7.76,0,0,1,8.14,8.13,7.85,7.85,0,0,1-8.26,8.16H45.52v8.45H41.68V21.19ZM45.52,34.26h4.41c3.34,0,5.24-1.8,5.24-4.92s-1.9-4.91-5.23-4.91H45.52Z"></path><path d="M60.1,40.8c0-3.15,2.42-5.09,6.7-5.33l4.94-.29V33.79c0-2-1.35-3.2-3.62-3.2s-3.48,1-3.8,2.64h-3.5c.21-3.26,3-5.66,7.44-5.66s7.17,2.31,7.17,5.93V45.93H71.88V43h-.09a6.43,6.43,0,0,1-5.69,3.28C62.57,46.24,60.1,44,60.1,40.8Zm11.64-1.62V37.75L67.3,38c-2.21.15-3.46,1.13-3.46,2.67s1.3,2.61,3.29,2.61A4.32,4.32,0,0,0,71.74,39.18Z"></path><path d="M78.78,52.56v-3a6.68,6.68,0,0,0,1.2.07c1.71,0,2.64-.72,3.2-2.57,0,0,.33-1.1.33-1.11L77,27.9h4l4.57,14.67h.06L90.19,27.9H94.1l-6.75,19c-1.54,4.37-3.33,5.78-7.06,5.78A12.26,12.26,0,0,1,78.78,52.56Z"></path></g></svg>
+          </button>
 
-        <!-- Tier C: Search & Filter Tools -->
-        <div class="pbb-search-wrapper">
-          <svg class="pbb-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-          </svg>
-          <input type="search" class="pbb-search-input" id="pbb-search-input" placeholder="Search bank name or BIC (e.g. ING, Rabo, bunq)..." aria-label="Search bank name or BIC" autocomplete="off">
-        </div>
+          <!-- PayPal -->
+          <button type="button" class="xp-btn xp-paypal" aria-label="Pay with PayPal">
+            <svg height="26" viewBox="0 0 100 32" xmlns="http://www.w3.org/2000/svg">
+              <text x="50" y="22" text-anchor="middle" font-family="'Inter', sans-serif" font-size="20" font-weight="800" font-style="italic" fill="#003087">Pay<tspan fill="#0079C1">Pal</tspan></text>
+            </svg>
+          </button>
 
-        <!-- Country Filter Tabs -->
-        <div class="pbb-country-tabs" role="tablist" aria-label="Filter banks by country">
-          <button type="button" class="pbb-tab-btn active" data-country="all" role="tab" aria-selected="true">All Banks</button>
-          <button type="button" class="pbb-tab-btn" data-country="NL" role="tab" aria-selected="false">Netherlands (NL)</button>
-          <button type="button" class="pbb-tab-btn" data-country="EU" role="tab" aria-selected="false">Pan-European</button>
-        </div>
-
-        <!-- Tier B: Bank Quick-Select Grid -->
-        <div class="pbb-bank-grid" id="pbb-bank-grid" role="radiogroup" aria-label="Choose your bank">
-          <!-- Populated dynamically via JS with accessible radio items -->
-        </div>
-
-        <!-- Empty search results notice -->
-        <div class="pbb-empty-state" id="pbb-empty-state" style="display:none;" role="status">
-          <strong>No matching bank found.</strong>
-          <p style="margin:4px 0 0;">Check your spelling or search by Bank Identifier Code (BIC).</p>
-        </div>
-
-        <!-- Continue CTA Button -->
-        <button type="button" class="pbb-primary-cta" id="pbb-btn-continue" disabled aria-live="polite">
-          <span>Select your bank to continue</span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-        </button>
-
-      </div>
-
-      <!-- ------------------------------------------------------------
-           SUB-STATE 2: STRONG CUSTOMER AUTHENTICATION (SCA) HANDOFF
-           ------------------------------------------------------------ -->
-      <div id="pbb-view-handoff" style="display:none;" class="pbb-handoff-box" role="region" aria-label="Bank Authentication">
-        
-        <div style="text-align:center;">
-          <h2 style="font-size:18px; font-weight:700; color:var(--text-primary); margin:0;" id="handoff-bank-title">Authorize with ING Bank</h2>
-          <p style="font-size:13px; color:var(--text-muted); margin:4px 0 0;">Confirm the payment of <strong>€ 61.95</strong> to Bloom &amp; Co</p>
-        </div>
-
-        <!-- Live Listener Status Indicator -->
-        <div class="pbb-radar-pulse" role="status" aria-live="polite">
-          <span class="pbb-dot-pulse"></span>
-          <span id="pbb-polling-status-text">Waiting for bank approval...</span>
-        </div>
-
-        <!-- Desktop QR Code Panel -->
-        <div id="pbb-desktop-panel" style="width:100%;">
-          <div class="pbb-qr-card" id="pbb-qr-container">
-            <!-- QR Code SVG injected dynamically -->
-          </div>
-          <p style="font-size:12.5px; color:var(--text-secondary); margin:8px 0 12px;">
-            Scan with your phone camera or banking app to approve with Face ID / Fingerprint.
-          </p>
-          <a href="#" id="pbb-web-banking-link" target="_blank" class="pbb-back-btn" style="display:inline-flex; justify-content:center; width:100%; font-size:13px;">
-            Open online banking portal in new tab ↗
-          </a>
-        </div>
-
-        <!-- Mobile App Direct Deep Link Panel -->
-        <div id="pbb-mobile-panel" style="display:none; width:100%;">
-          <a href="#" id="pbb-app-deep-link" class="pbb-primary-cta" style="text-decoration:none;">
-            <span>Open Banking App to Authorize</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-          </a>
-          <p style="font-size:11.5px; color:var(--text-muted); margin-top:8px;">
-            If inside Instagram or TikTok, tap <strong>···</strong> and select "Open in Browser".
-          </p>
-        </div>
-
-        <!-- Interactive Sandbox Test Simulator -->
-        <div class="pbb-sandbox-card">
-          <div class="pbb-sandbox-header">
-            <span>⚡ PISP Gateway Sandbox Simulator</span>
-            <span style="color:#34D399;">Ready</span>
-          </div>
-          <p style="font-size:12px; color:#D1D5DB; margin:0 0 10px;">
-            Simulate the user approving the transfer in their banking app to verify immediate settlement telemetry.
-          </p>
-          <button type="button" class="pbb-sim-btn" id="pbb-btn-simulate-auth">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            Simulate Bank App Approval (SCA Success)
+          <!-- Google Pay -->
+          <button type="button" class="xp-btn xp-gpay" aria-label="Pay with Google Pay">
+            <svg height="38" viewBox="2 1.9 124.1 66.2" aria-hidden="true" style="display:block;"><g>
+              <path d="M61.2,37.2v10H58V22.6h8.4c2.1,0,3.9,0.7,5.4,2.1c1.5,1.4,2.3,3.2,2.3,5.2c0,2.1-0.8,3.8-2.3,5.2c-1.5,1.4-3.3,2.1-5.4,2.1L61.2,37.2L61.2,37.2z M61.2,25.6v8.6h5.3c1.3,0,2.3-0.4,3.1-1.3c0.8-0.8,1.3-1.9,1.3-3c0-1.1-0.4-2.1-1.3-3c-0.8-0.9-1.9-1.3-3.1-1.3L61.2,25.6L61.2,25.6z" fill="#3C4043"></path>
+              <path d="M82.4,29.8c2.3,0,4.2,0.6,5.5,1.9c1.4,1.3,2,3,2,5.1v10.4h-3v-2.3h-0.1c-1.3,1.9-3.1,2.9-5.2,2.9c-1.9,0-3.4-0.5-4.7-1.7C75.6,45,75,43.6,75,42c0-1.7,0.7-3.1,2-4.2c1.3-1,3.1-1.6,5.3-1.6c1.9,0,3.4,0.3,4.6,1v-0.7c0-1.1-0.4-2-1.3-2.8c-0.9-0.8-1.9-1.2-3.1-1.2c-1.8,0-3.2,0.7-4.2,2.2l-2.8-1.7C77.1,30.9,79.4,29.8,82.4,29.8z M78.3,42c0,0.8,0.3,1.5,1.1,2.1c0.7,0.5,1.5,0.8,2.5,0.8c1.3,0,2.5-0.5,3.6-1.5s1.6-2.1,1.6-3.5c-1-0.8-2.4-1.2-4.1-1.2c-1.3,0-2.4,0.3-3.2,0.9C78.7,40.3,78.3,41.1,78.3,42z" fill="#3C4043"></path>
+              <path d="M107.2,30.3L96.6,54.6h-3.3l3.9-8.5l-7-15.8h3.4l5,12.1h0.1l4.9-12.1H107.2z" fill="#3C4043"></path>
+              <path d="M48.6,35.2c0-1-0.1-2-0.3-3H35v5.4l7.6,0c-0.3,1.8-1.3,3.4-2.8,4.4v3.5h4.6C47,43.1,48.6,39.5,48.6,35.2z" fill="#4285F4"></path>
+              <path d="M39.8,42.1c-1.3,0.9-2.9,1.4-4.8,1.4c-3.7,0-6.8-2.5-7.9-5.8h-4.7v3.6C24.7,45.9,29.5,49,35,49c3.8,0,7-1.3,9.4-3.4L39.8,42.1z" fill="#34A853"></path>
+              <path d="M26.6,34.9c0-0.9,0.2-1.8,0.4-2.7v-3.6h-4.7c-1,1.9-1.5,4.1-1.5,6.3c0,2.3,0.5,4.4,1.5,6.3l4.7-3.6C26.8,36.7,26.6,35.8,26.6,34.9z" fill="#FABB05"></path>
+              <path d="M35,26.4c2.1,0,4,0.7,5.4,2.1l4-4c-2.5-2.3-5.6-3.7-9.5-3.7c-5.5,0-10.3,3.2-12.6,7.8l4.7,3.6C28.2,28.8,31.3,26.4,35,26.4z" fill="#E94235"></path>
+            </g></svg>
           </button>
         </div>
 
-        <!-- Cancel / Change Bank -->
-        <button type="button" class="pbb-back-btn" id="pbb-btn-change-bank" style="margin-top:6px;">
-          ← Cancel or select a different bank
-        </button>
+        <div class="divider-row">
+          <span class="divider-line"></span>
+          <span>or choose a payment method</span>
+          <span class="divider-line"></span>
+        </div>
 
+        <span class="methods-avail-count">13 payment methods available</span>
+
+        <!-- 2-Column Scrollable Grid (Exact match to screenshot) -->
+        <div class="plist" role="group" aria-label="Payment methods, scrollable list" tabindex="0">
+          
+          <!-- 1. Credit or debit card -->
+          <button type="button" class="tile" id="tile-card" onclick="alert('Demo: Select Pay by bank to test the direct bank transfer flow.')">
+            <span class="tile-icon-box">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3A3C37" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"></rect><path d="M3 10h18M7 14.5h3"></path></svg>
+            </span>
+            <span class="tile-body">
+              <span class="tile-name">Credit or debit card</span>
+              <span class="tile-desc">Visa, Mastercard, American Express</span>
+            </span>
+          </button>
+
+          <!-- 2. Pay by bank (STAR HERO METHOD) -->
+          <button type="button" class="tile selected" id="tile-pay-by-bank">
+            <span class="tile-icon-box" style="background:#FFF7ED; border: 1px solid #FFEDD5;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EA580C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5L12 4l9 5.5M5 10v7M9.5 10v7M14.5 10v7M19 10v7M3.5 20h17"></path></svg>
+            </span>
+            <span class="tile-body">
+              <span class="tile-name" style="color:#C2410C;">Pay by bank</span>
+              <span class="tile-desc">Secure payment from your bank</span>
+            </span>
+          </button>
+
+          <!-- 3. Klarna -->
+          <button type="button" class="tile" onclick="alert('Demo: Select Pay by bank to test the direct bank transfer flow.')">
+            <span class="tile-icon-box" style="background:#FFB3C7;">
+              <span style="font-size:10px; font-weight:800; color:#0A0B09; font-family:'Inter', sans-serif;">Klarna.</span>
+            </span>
+            <span class="tile-body">
+              <span class="tile-name">Klarna</span>
+              <span class="tile-desc">Pay now or pay later</span>
+            </span>
+          </button>
+
+          <!-- 4. iDEAL -->
+          <button type="button" class="tile" onclick="openPayByBank()">
+            <span class="tile-icon-box" style="background:#FFFFFF; border:1px solid #E3E4DE;">
+              <img src="assets/ideal-wero.svg" alt="iDEAL" style="width:26px; height:auto;">
+            </span>
+            <span class="tile-body">
+              <span class="tile-name">iDEAL</span>
+              <span class="tile-desc">Pay securely with your Dutch bank</span>
+            </span>
+          </button>
+
+          <!-- 5. Wero -->
+          <button type="button" class="tile" onclick="alert('Demo: Select Pay by bank to test the direct bank transfer flow.')">
+            <span class="tile-icon-box" style="background:#FFF48D;">
+              <span style="font-size:9.5px; font-weight:800; color:#5B2D8C; letter-spacing:0.2px;">wero</span>
+            </span>
+            <span class="tile-body">
+              <span class="tile-name">Wero</span>
+              <span class="tile-desc">Pay directly from your bank account</span>
+            </span>
+          </button>
+
+          <!-- 6. Sofort -->
+          <button type="button" class="tile" onclick="alert('Demo: Select Pay by bank to test the direct bank transfer flow.')">
+            <span class="tile-icon-box" style="background:#FFFFFF; border:1px solid #E3E4DE;">
+              <span style="background:#FFA8CD; color:#000; font-size:7px; font-weight:800; padding:2px 4px; border-radius:3px;">SOFORT</span>
+            </span>
+            <span class="tile-body">
+              <span class="tile-name">Sofort</span>
+              <span class="tile-desc">Instant online bank transfer</span>
+            </span>
+          </button>
+
+          <!-- 7. Bancontact -->
+          <button type="button" class="tile" onclick="alert('Demo: Select Pay by bank to test the direct bank transfer flow.')">
+            <span class="tile-icon-box" style="background:#FFFFFF; border:1px solid #E3E4DE;">
+              <img src="assets/bancontact.svg" alt="Bancontact" style="width:28px; height:auto;">
+            </span>
+            <span class="tile-body">
+              <span class="tile-name">Bancontact</span>
+              <span class="tile-desc">Pay with your Bancontact Pay app</span>
+            </span>
+          </button>
+
+          <!-- 8. Riverty -->
+          <button type="button" class="tile" onclick="alert('Demo: Select Pay by bank to test the direct bank transfer flow.')">
+            <span class="tile-icon-box" style="background:#FFFFFF; border:1px solid #E3E4DE;">
+              <span style="font-size:8px; font-weight:700; color:#1C355E; letter-spacing:0.5px;">RIVERTY</span>
+            </span>
+            <span class="tile-body">
+              <span class="tile-name">Riverty</span>
+              <span class="tile-desc">Buy now, pay later</span>
+            </span>
+          </button>
+
+          <!-- 9. Billink -->
+          <button type="button" class="tile" onclick="alert('Demo: Select Pay by bank to test the direct bank transfer flow.')">
+            <span class="tile-icon-box"><span style="font-size:9px; font-weight:700;">BILL</span></span>
+            <span class="tile-body"><span class="tile-name">Billink</span><span class="tile-desc">Receive order, pay later</span></span>
+          </button>
+
+          <!-- 10. EPS -->
+          <button type="button" class="tile" onclick="alert('Demo: Select Pay by bank to test the direct bank transfer flow.')">
+            <span class="tile-icon-box"><span style="font-size:9px; font-weight:700;">EPS</span></span>
+            <span class="tile-body"><span class="tile-name">EPS</span><span class="tile-desc">Pay with Austrian bank</span></span>
+          </button>
+
+          <!-- 11. Przelewy24 -->
+          <button type="button" class="tile" onclick="alert('Demo: Select Pay by bank to test the direct bank transfer flow.')">
+            <span class="tile-icon-box"><span style="font-size:9px; font-weight:700;">P24</span></span>
+            <span class="tile-body"><span class="tile-name">Przelewy24</span><span class="tile-desc">Online payments in Poland</span></span>
+          </button>
+
+          <!-- 12. Multibanco -->
+          <button type="button" class="tile" onclick="alert('Demo: Select Pay by bank to test the direct bank transfer flow.')">
+            <span class="tile-icon-box"><span style="font-size:8px; font-weight:700;">MB</span></span>
+            <span class="tile-body"><span class="tile-name">Multibanco</span><span class="tile-desc">Pay with reference</span></span>
+          </button>
+
+          <!-- 13. Paysafecard -->
+          <button type="button" class="tile" onclick="alert('Demo: Select Pay by bank to test the direct bank transfer flow.')">
+            <span class="tile-icon-box"><span style="font-size:8px; font-weight:700;">PSC</span></span>
+            <span class="tile-body"><span class="tile-name">Paysafecard</span><span class="tile-desc">Prepaid voucher code</span></span>
+          </button>
+
+        </div>
+
+        <div role="status" class="scroll-notice">Scroll inside the list to see all 13 payment methods</div>
       </div>
 
-      <!-- ------------------------------------------------------------
-           SUB-STATE 3: SETTLEMENT CONFIRMED & SUCCESS RECEIPT
-           ------------------------------------------------------------ -->
-      <div id="pbb-view-success" style="display:none;" class="pbb-success-box" role="region" aria-label="Payment Confirmed">
-        <div class="pbb-check-circle">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <!-- SUB-PANE 2: Pay by Bank Selection Flow (Integrated Clean UI) -->
+      <div class="col-payment-body pbb-flow-container" id="pane-pbb-select">
+        <button type="button" class="back-to-methods-btn" id="btn-back-to-methods">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+          <span>Choose another payment method</span>
+        </button>
+
+        <div class="pbb-header">
+          <div>
+            <h3 class="pbb-title">Pay by bank</h3>
+            <p class="pbb-sub">Instant transfer • No card surcharges • 100% encrypted</p>
+          </div>
+          <span class="pbb-dnb-badge">DNB Supervised</span>
+        </div>
+
+        <!-- Search bar -->
+        <input type="search" class="pbb-search-field" id="pbb-search" placeholder="Search your bank (e.g. ING, Rabo, bunq)..." autocomplete="off">
+
+        <!-- Country filters -->
+        <div class="pbb-tabs">
+          <button type="button" class="pbb-tab active" data-country="all">All</button>
+          <button type="button" class="pbb-tab" data-country="NL">Netherlands</button>
+          <button type="button" class="pbb-tab" data-country="EU">Pan-European</button>
+        </div>
+
+        <!-- Bank selection grid -->
+        <div class="pbb-bank-list" id="pbb-bank-list" role="radiogroup">
+          <!-- Dynamically populated -->
+        </div>
+
+        <button type="button" class="btn-pay-action" id="btn-continue-pbb" disabled>
+          <span>Select your bank to continue</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+
+      <!-- SUB-PANE 3: SCA QR Code & Mobile Approval -->
+      <div class="col-payment-body pbb-handoff-pane" id="pane-pbb-handoff">
+        <button type="button" class="back-to-methods-btn" id="btn-back-to-banks">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+          <span>Change selected bank</span>
+        </button>
+
+        <div>
+          <h3 class="pbb-title" id="handoff-title" style="font-size:18px;">Authorize with ING Bank</h3>
+          <p class="pbb-sub" style="margin-top:2px;">Approve <strong>€120.00 EUR</strong> to Amnesia Ibiza</p>
+        </div>
+
+        <div class="radar-status">
+          <span class="dot-blink"></span>
+          <span>Waiting for mobile bank authorization...</span>
+        </div>
+
+        <div class="pbb-qr-wrapper" id="pbb-qr-box">
+          <!-- Scalable SVG QR code -->
+        </div>
+
+        <p style="font-size:12.5px; color:#797C74; margin:0 0 4px;">
+          Scan with your phone camera or banking app to approve with Face ID / PIN.
+        </p>
+
+        <a href="#" target="_blank" id="web-banking-link" style="font-size:13px; font-weight:600; color:#0D314B; text-decoration:underline;">
+          Open online banking in new tab ↗
+        </a>
+
+        <!-- Simulator Button for Instant Sandbox Verification -->
+        <div class="sim-box">
+          <div style="font-size:11px; font-weight:700; color:#6B7280; text-transform:uppercase;">Sandbox Verification</div>
+          <button type="button" class="sim-btn" id="btn-simulate-sca">
+            ⚡ Simulate Bank App Approval (SCA Success)
+          </button>
+        </div>
+      </div>
+
+      <!-- SUB-PANE 4: Settlement Confirmed / Success Receipt -->
+      <div class="col-payment-body pbb-success-pane" id="pane-pbb-success">
+        <div class="check-green-circle">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="20 6 9 17 4 12"/>
           </svg>
         </div>
 
         <div>
-          <h2 style="font-size:20px; font-weight:800; color:var(--text-primary); margin:0;">Payment Settled!</h2>
-          <p style="font-size:13.5px; color:var(--text-secondary); margin:4px 0 0;">
-            Direct bank transfer of <strong style="color:var(--text-primary)">€ 61.95</strong> completed via SEPA Instant.
-          </p>
+          <h3 class="pbb-title" style="font-size:20px; color:#00875A;">Payment Settled!</h3>
+          <p class="pbb-sub">Instant SEPA transfer completed for Amnesia Ibiza.</p>
         </div>
 
-        <div class="pbb-receipt-card">
-          <div class="pbb-receipt-row">
-            <span class="label">Merchant</span>
-            <span class="value" style="font-family:var(--font-body); font-weight:700;">Bloom &amp; Co · Florists</span>
-          </div>
-          <div class="pbb-receipt-row">
-            <span class="label">Order Ref</span>
-            <span class="value" id="receipt-order-ref">#BC-208451</span>
-          </div>
-          <div class="pbb-receipt-row">
-            <span class="label">Payment ID</span>
-            <span class="value" id="receipt-payment-id">PAY-GO-7265712D</span>
-          </div>
-          <div class="pbb-receipt-row">
-            <span class="label">Clearing Ref</span>
-            <span class="value" id="receipt-clearing-ref">SCT-INST-GO-2026</span>
-          </div>
-          <div class="pbb-receipt-row">
-            <span class="label">Settlement Rail</span>
-            <span class="value" style="color:var(--success);">SEPA Instant (TIPS / RT1)</span>
-          </div>
-          <div class="pbb-receipt-row">
-            <span class="label">Timestamp</span>
-            <span class="value" id="receipt-timestamp">Just now</span>
-          </div>
+        <div class="receipt-table">
+          <div class="receipt-row"><span class="k">Merchant</span><span class="v">Amnesia Ibiza</span></div>
+          <div class="receipt-row"><span class="k">Order Ref</span><span class="v">AMN-2026-08421</span></div>
+          <div class="receipt-row"><span class="k">Amount</span><span class="v" style="font-size:14px;">€ 120.00 EUR</span></div>
+          <div class="receipt-row"><span class="k">Clearing Ref</span><span class="v" id="rcpt-clearing" style="font-family:monospace; font-size:11px;">SCT-INST-GO-2026</span></div>
+          <div class="receipt-row"><span class="k">Rail</span><span class="v" style="color:#00875A;">SEPA Instant (TIPS / RT1)</span></div>
+          <div class="receipt-row"><span class="k">Timestamp</span><span class="v" id="rcpt-time">Just now</span></div>
         </div>
 
-        <p style="font-size:12px; color:var(--text-muted); margin:0;" id="pbb-redirect-countdown-text">
-          Redirecting to merchant store in <strong id="pbb-countdown-num">5</strong>s...
+        <p style="font-size:12px; color:#797C74; margin:0;">
+          Redirecting to Amnesia Ibiza in <strong id="countdown-val">5</strong>s...
         </p>
 
-        <button type="button" class="pbb-primary-cta" id="pbb-btn-return-merchant">
-          Return to Bloom &amp; Co Now →
+        <button type="button" class="btn-pay-action" id="btn-return-store" style="height:44px; font-size:14px;">
+          Return to Amnesia Ibiza Now →
         </button>
       </div>
 
+      <!-- Bottom Navy Footer Bar -->
+      <footer class="secured-bar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2.5"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+        <span>Secured by</span>
+        <img src="assets/cm-white.png" alt="CM.com">
+      </footer>
+
     </section>
 
-    <!-- Footer -->
-    <footer class="checkout-footer">
-      <div class="brand-line">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-        <span>Secured by <span class="cm-mark">CM.com Payments</span> · Licensed Institution</span>
-      </div>
-      <div>Supervised by De Nederlandsche Bank (DNB Relation: R129862) · PSD2 Compliant</div>
-    </footer>
   </main>
 
-  <!-- Helper link to styling back office -->
-  <p style="text-align:center; margin: 24px auto 0; color: rgba(255,255,255,0.75); font-size: 12px; max-width: 520px;">
-    Merchant view? <a href="backoffice.html" style="color:#fff; text-decoration: underline;">Open the styling back office →</a>
-  </p>
-</div>
+  <span class="design-preview-text">Design preview · No payment will be taken</span>
 
-<!-- ============================================================
-     APPLICATION LOGIC: DIRECT BANK SELECTION & PISP GATEWAY
-     ============================================================ -->
 <script>
 (function() {
   'use strict';
 
-  // Bank Directory with official vector logos and metadata
-  const BANK_CATALOG = [
-    {
-      id: 'ing',
-      name: 'ING Bank',
-      bic: 'INGBNL2A',
-      country: 'NL',
-      popular: true,
-      sub: 'Instant Transfer Supported',
-      keywords: ['ing', 'lion', 'oranje', 'ingbnl2a'],
-      logoSvg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="40" height="40" rx="8" fill="#FF6200"/>
-        <path d="M29 25c-1-3-3-5-6-6 3-1 6-4 6-7 0-4-3-6-8-6H12v22h6v-6h4c3 0 5 1 6 3h1z" fill="#FFFFFF"/>
-        <circle cx="27" cy="13" r="3" fill="#000066"/>
-      </svg>`
-    },
-    {
-      id: 'rabobank',
-      name: 'Rabobank',
-      bic: 'RABONL2U',
-      country: 'NL',
-      popular: true,
-      sub: 'Instant Transfer Supported',
-      keywords: ['rabobank', 'rabo', 'rabonl2u'],
-      logoSvg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="40" height="40" rx="8" fill="#000066"/>
-        <circle cx="20" cy="20" r="12" fill="#FF6600"/>
-        <path d="M20 11a9 9 0 100 18 9 9 0 000-18zm-2 5a2 2 0 114 0 2 2 0 01-4 0zm5 9h-6v-2h2v-4h-1v-2h3v6h2v2z" fill="#FFFFFF"/>
-      </svg>`
-    },
-    {
-      id: 'abnamro',
-      name: 'ABN AMRO',
-      bic: 'ABNANL2A',
-      country: 'NL',
-      popular: true,
-      sub: 'Instant Transfer Supported',
-      keywords: ['abnamro', 'abn', 'amro', 'abnanl2a'],
-      logoSvg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="40" height="40" rx="8" fill="#00845F"/>
-        <polygon points="12,12 28,12 20,28" fill="#FFD200"/>
-        <polygon points="20,12 28,12 24,20" fill="#005A40"/>
-      </svg>`
-    },
-    {
-      id: 'volksbank',
-      name: 'De Volksbank',
-      bic: 'SNSBNL2A',
-      country: 'NL',
-      popular: true,
-      sub: 'SNS • ASN • RegioBank',
-      keywords: ['volksbank', 'sns', 'asn', 'regiobank', 'snsbnl2a'],
-      logoSvg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="40" height="40" rx="8" fill="#E11A27"/>
-        <rect x="8" y="8" width="11" height="11" fill="#FFFFFF"/>
-        <rect x="21" y="8" width="11" height="11" fill="#1C355E"/>
-        <rect x="8" y="21" width="11" height="11" fill="#1C355E"/>
-        <rect x="21" y="21" width="11" height="11" fill="#FFFFFF"/>
-      </svg>`
-    },
-    {
-      id: 'bunq',
-      name: 'bunq',
-      bic: 'BUNQNL2A',
-      country: 'NL',
-      popular: false,
-      sub: 'Real-Time Mobile Bank',
-      keywords: ['bunq', 'rainbow', 'bunqnl2a'],
-      logoSvg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="40" height="40" rx="8" fill="#111827"/>
-        <circle cx="20" cy="20" r="11" stroke="#00C48C" stroke-width="3"/>
-        <circle cx="20" cy="20" r="7" stroke="#FF5A5F" stroke-width="2.5"/>
-        <circle cx="20" cy="20" r="3" fill="#0099FF"/>
-      </svg>`
-    },
-    {
-      id: 'revolut',
-      name: 'Revolut',
-      bic: 'REVONL21',
-      country: 'EU',
-      popular: false,
-      sub: 'SEPA Instant Supported',
-      keywords: ['revolut', 'revonl21', 'pan-eu'],
-      logoSvg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="40" height="40" rx="8" fill="#000000"/>
-        <path d="M14 11h7c3 0 5 1.5 5 4s-2 4-5 4h-3v8h-4V11zm4 5h3c1 0 2-.5 2-1.5s-1-1.5-2-1.5h-3v3zm4 5l5 6h-4l-4-5 3-1z" fill="#FFFFFF"/>
-      </svg>`
-    },
-    {
-      id: 'knab',
-      name: 'Knab',
-      bic: 'KNABNL2H',
-      country: 'NL',
-      popular: false,
-      sub: 'Instant Transfer Supported',
-      keywords: ['knab', 'knabnl2h'],
-      logoSvg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="40" height="40" rx="8" fill="#FA4616"/>
-        <text x="20" y="26" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="900" fill="#FFFFFF">k.</text>
-      </svg>`
-    },
-    {
-      id: 'triodos',
-      name: 'Triodos Bank',
-      bic: 'TRIONL2U',
-      country: 'EU',
-      popular: false,
-      sub: 'Ethical Banking',
-      keywords: ['triodos', 'trionl2u'],
-      logoSvg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="40" height="40" rx="8" fill="#003B46"/>
-        <circle cx="20" cy="20" r="10" stroke="#00A896" stroke-width="3"/>
-        <path d="M20 14v12M14 20h12" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
-      </svg>`
-    }
+  const BANKS = [
+    { id: 'ing', name: 'ING Bank', bic: 'INGBNL2A', country: 'NL', sub: 'Instant Transfer', color: '#FF6200', tag: 'ING' },
+    { id: 'rabobank', name: 'Rabobank', bic: 'RABONL2U', country: 'NL', sub: 'Instant Transfer', color: '#000066', tag: 'RABO' },
+    { id: 'abnamro', name: 'ABN AMRO', bic: 'ABNANL2A', country: 'NL', sub: 'Instant Transfer', color: '#00845F', tag: 'ABN' },
+    { id: 'volksbank', name: 'De Volksbank', bic: 'SNSBNL2A', country: 'NL', sub: 'SNS / ASN / Regio', color: '#E11A27', tag: 'SNS' },
+    { id: 'bunq', name: 'bunq', bic: 'BUNQNL2A', country: 'NL', sub: 'Mobile Bank', color: '#00C48C', tag: 'bunq' },
+    { id: 'revolut', name: 'Revolut', bic: 'REVONL21', country: 'EU', sub: 'SEPA Instant', color: '#000000', tag: 'REV' },
+    { id: 'knab', name: 'Knab', bic: 'KNABNL2H', country: 'NL', sub: 'Instant Transfer', color: '#FA4616', tag: 'KNAB' },
+    { id: 'triodos', name: 'Triodos Bank', bic: 'TRIONL2U', country: 'EU', sub: 'Ethical Banking', color: '#003B46', tag: 'TRIO' }
   ];
 
-  // DOM Elements
-  const sectionMethods = document.getElementById('section-payment-methods');
-  const sectionPBB = document.getElementById('section-pay-by-bank');
-  const btnPBBMethod = document.getElementById('pm-pay-by-bank');
-  const btnBackMethods = document.getElementById('pbb-back-btn');
-  const globalBackLink = document.getElementById('global-back-link');
-  const globalBackText = document.getElementById('global-back-text');
+  // Panes
+  const paneMethods = document.getElementById('pane-methods');
+  const panePbbSelect = document.getElementById('pane-pbb-select');
+  const panePbbHandoff = document.getElementById('pane-pbb-handoff');
+  const panePbbSuccess = document.getElementById('pane-pbb-success');
 
-  // PBB Sub-Views
-  const viewSelect = document.getElementById('pbb-view-select');
-  const viewHandoff = document.getElementById('pbb-view-handoff');
-  const viewSuccess = document.getElementById('pbb-view-success');
+  // Controls
+  const tilePayByBank = document.getElementById('tile-pay-by-bank');
+  const btnBackToMethods = document.getElementById('btn-back-to-methods');
+  const btnBackToBanks = document.getElementById('btn-back-to-banks');
+  const searchInput = document.getElementById('pbb-search');
+  const bankListEl = document.getElementById('pbb-bank-list');
+  const countryTabs = document.querySelectorAll('.pbb-tab');
+  const btnContinue = document.getElementById('btn-continue-pbb');
+  const handoffTitle = document.getElementById('handoff-title');
+  const qrBox = document.getElementById('pbb-qr-box');
+  const webBankingLink = document.getElementById('web-banking-link');
+  const btnSimulateSca = document.getElementById('btn-simulate-sca');
+  const rcptClearing = document.getElementById('rcpt-clearing');
+  const rcptTime = document.getElementById('rcpt-time');
+  const countdownVal = document.getElementById('countdown-val');
+  const btnReturnStore = document.getElementById('btn-return-store');
 
-  // Stepper Nodes
-  const stepNode1 = document.getElementById('step-node-1');
-  const stepNode2 = document.getElementById('step-node-2');
-  const stepNode3 = document.getElementById('step-node-3');
-
-  // PBB Controls
-  const bankGrid = document.getElementById('pbb-bank-grid');
-  const searchInput = document.getElementById('pbb-search-input');
-  const emptyState = document.getElementById('pbb-empty-state');
-  const btnContinue = document.getElementById('pbb-btn-continue');
-  const tierAContainer = document.getElementById('pbb-tier-a-container');
-  const countryTabs = document.querySelectorAll('.pbb-tab-btn');
-
-  // Handoff Controls
-  const handoffTitle = document.getElementById('handoff-bank-title');
-  const qrContainer = document.getElementById('pbb-qr-container');
-  const webBankingLink = document.getElementById('pbb-web-banking-link');
-  const appDeepLink = document.getElementById('pbb-app-deep-link');
-  const desktopPanel = document.getElementById('pbb-desktop-panel');
-  const mobilePanel = document.getElementById('pbb-mobile-panel');
-  const btnSimulateAuth = document.getElementById('pbb-btn-simulate-auth');
-  const btnChangeBank = document.getElementById('pbb-btn-change-bank');
-  const pollingStatusText = document.getElementById('pbb-polling-status-text');
-
-  // Success Controls
-  const receiptOrderRef = document.getElementById('receipt-order-ref');
-  const receiptPaymentId = document.getElementById('receipt-payment-id');
-  const receiptClearingRef = document.getElementById('receipt-clearing-ref');
-  const receiptTimestamp = document.getElementById('receipt-timestamp');
-  const countdownNum = document.getElementById('pbb-countdown-num');
-  const btnReturnMerchant = document.getElementById('pbb-btn-return-merchant');
-
-  // State Management
   let selectedBank = null;
   let activeCountry = 'all';
-  let activePaymentRecord = null;
-  let pollingInterval = null;
-  let redirectCountdownInterval = null;
+  let activePayment = null;
+  let pollTimer = null;
+  let cdTimer = null;
 
-  const ORDER_AMOUNT = 61.95;
-  const ORDER_REF = 'BC-208451';
   const API_BASE = window.location.origin.includes('8088') ? '' : 'http://localhost:8088';
 
-  // -------------------------------------------------------------
-  // Navigation Transitions
-  // -------------------------------------------------------------
-  function showPaymentMethods() {
-    sectionPBB.style.display = 'none';
-    sectionMethods.style.display = 'block';
-    globalBackText.textContent = 'Back to cart';
-    globalBackLink.onclick = null;
-    history.replaceState(null, '', window.location.pathname);
-    stopPolling();
+  function showPane(pane) {
+    paneMethods.style.display = (pane === 'methods') ? 'flex' : 'none';
+    panePbbSelect.style.display = (pane === 'select') ? 'flex' : 'none';
+    panePbbHandoff.style.display = (pane === 'handoff') ? 'flex' : 'none';
+    panePbbSuccess.style.display = (pane === 'success') ? 'flex' : 'none';
   }
 
-  function showPayByBankFlow() {
-    sectionMethods.style.display = 'none';
-    sectionPBB.style.display = 'flex';
-    globalBackText.textContent = 'Payment methods';
-    globalBackLink.onclick = function(e) {
-      e.preventDefault();
-      showPaymentMethods();
-    };
-    setStepper(1);
-    showSubView('select');
-    renderPreferredBank();
+  window.openPayByBank = function() {
+    showPane('select');
     renderBanks();
-  }
+  };
 
-  function showSubView(state) {
-    viewSelect.style.display = (state === 'select') ? 'flex' : 'none';
-    viewHandoff.style.display = (state === 'handoff') ? 'flex' : 'none';
-    viewSuccess.style.display = (state === 'success') ? 'flex' : 'none';
-  }
-
-  function setStepper(step) {
-    stepNode1.className = 'pbb-step-item' + (step === 1 ? ' active' : (step > 1 ? ' completed' : ''));
-    stepNode2.className = 'pbb-step-item' + (step === 2 ? ' active' : (step > 2 ? ' completed' : ''));
-    stepNode3.className = 'pbb-step-item' + (step === 3 ? ' active completed' : '');
-  }
-
-  // -------------------------------------------------------------
-  // Tier A: Preferred Bank Memory (localStorage)
-  // -------------------------------------------------------------
-  function renderPreferredBank() {
-    try {
-      const preferredId = localStorage.getItem('cm_pisp_preferred_bank');
-      if (!preferredId) {
-        tierAContainer.style.display = 'none';
-        return;
-      }
-      const bank = BANK_CATALOG.find(b => b.id === preferredId);
-      if (!bank) {
-        tierAContainer.style.display = 'none';
-        return;
-      }
-
-      tierAContainer.innerHTML = `
-        <div class="pbb-preferred-block" id="pbb-preferred-card" role="button" tabindex="0" aria-label="Use preferred bank: ${bank.name}">
-          <div class="pbb-pref-left">
-            <div class="pbb-bank-logo">${bank.logoSvg}</div>
-            <div>
-              <p class="pbb-pref-title">${bank.name}</p>
-              <p class="pbb-pref-sub">Your preferred banking app</p>
-            </div>
-          </div>
-          <span class="badge-tag used">Recently Used</span>
-        </div>
-      `;
-      tierAContainer.style.display = 'block';
-
-      const prefCard = document.getElementById('pbb-preferred-card');
-      prefCard.addEventListener('click', () => {
-        selectBank(bank.id);
-      });
-      prefCard.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          selectBank(bank.id);
-        }
-      });
-    } catch (e) {
-      tierAContainer.style.display = 'none';
-    }
-  }
-
-  // -------------------------------------------------------------
-  // Tier B & C: Bank Search & Grid
-  // -------------------------------------------------------------
   function renderBanks() {
-    const query = (searchInput.value || '').trim().toLowerCase();
-    
-    const filtered = BANK_CATALOG.filter(bank => {
-      // Country check
-      if (activeCountry !== 'all' && bank.country !== activeCountry) {
-        return false;
-      }
-      // Query check
-      if (!query) return true;
-      if (bank.name.toLowerCase().includes(query)) return true;
-      if (bank.bic.toLowerCase().includes(query)) return true;
-      return bank.keywords.some(k => k.includes(query));
+    const q = (searchInput.value || '').trim().toLowerCase();
+    const filtered = BANKS.filter(b => {
+      if (activeCountry !== 'all' && b.country !== activeCountry) return false;
+      if (!q) return true;
+      return b.name.toLowerCase().includes(q) || b.bic.toLowerCase().includes(q) || b.tag.toLowerCase().includes(q);
     });
 
-    bankGrid.innerHTML = '';
-    if (filtered.length === 0) {
-      emptyState.style.display = 'block';
-    } else {
-      emptyState.style.display = 'none';
-      filtered.forEach(bank => {
-        const isSelected = selectedBank && selectedBank.id === bank.id;
-        const card = document.createElement('button');
-        card.type = 'button';
-        card.className = 'pbb-bank-card' + (isSelected ? ' selected' : '');
-        card.setAttribute('role', 'radio');
-        card.setAttribute('aria-checked', isSelected ? 'true' : 'false');
-        card.setAttribute('aria-label', `${bank.name}, ${bank.sub}`);
-        card.dataset.bankId = bank.id;
-
-        card.innerHTML = `
-          <div class="pbb-bank-logo">${bank.logoSvg}</div>
-          <div class="pbb-bank-info">
-            <p class="pbb-bank-name">${bank.name}</p>
-            <p class="pbb-bank-sub">${bank.sub}</p>
-          </div>
-          <div class="pbb-check-badge">✓</div>
-        `;
-
-        card.addEventListener('click', () => selectBank(bank.id));
-        bankGrid.appendChild(card);
-      });
-    }
-
-    updateContinueButton();
-  }
-
-  function selectBank(bankId) {
-    selectedBank = BANK_CATALOG.find(b => b.id === bankId) || null;
-    
-    // Persist preference
-    try {
-      if (selectedBank) {
-        localStorage.setItem('cm_pisp_preferred_bank', selectedBank.id);
-      }
-    } catch (e) {}
-
-    // Update UI selection
-    const cards = bankGrid.querySelectorAll('.pbb-bank-card');
-    cards.forEach(card => {
-      const match = card.dataset.bankId === bankId;
-      card.classList.toggle('selected', match);
-      card.setAttribute('aria-checked', match ? 'true' : 'false');
+    bankListEl.innerHTML = '';
+    filtered.forEach(b => {
+      const isSel = selectedBank && selectedBank.id === b.id;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'tile' + (isSel ? ' selected' : '');
+      btn.innerHTML = `
+        <span class="tile-icon-box" style="background:${b.color}; color:#fff; font-size:10px; font-weight:800;">
+          ${b.tag}
+        </span>
+        <span class="tile-body">
+          <span class="tile-name">${b.name}</span>
+          <span class="tile-desc">${b.sub}</span>
+        </span>
+      `;
+      btn.onclick = () => {
+        selectedBank = b;
+        renderBanks();
+        btnContinue.disabled = false;
+        btnContinue.querySelector('span').textContent = `Continue with ${b.name}`;
+      };
+      bankListEl.appendChild(btn);
     });
-
-    updateContinueButton();
   }
 
-  function updateContinueButton() {
-    if (selectedBank) {
-      btnContinue.disabled = false;
-      btnContinue.querySelector('span').textContent = `Continue with ${selectedBank.name}`;
-    } else {
-      btnContinue.disabled = true;
-      btnContinue.querySelector('span').textContent = 'Select your bank to continue';
-    }
-  }
-
-  // -------------------------------------------------------------
-  // State 2: Initiate Payment & SCA Handoff
-  // -------------------------------------------------------------
-  async function initiatePayment() {
+  async function startHandoff() {
     if (!selectedBank) return;
-
     btnContinue.disabled = true;
-    btnContinue.querySelector('span').textContent = 'Initiating with bank...';
+    btnContinue.querySelector('span').textContent = 'Connecting with bank...';
 
     const payload = {
       bank_id: selectedBank.id,
-      amount: ORDER_AMOUNT,
+      amount: 120.00,
       currency: 'EUR',
-      merchant_reference: ORDER_REF,
+      merchant_reference: 'AMN-2026-08421',
       creditor_iban: 'NL91ABNA0417164300',
-      description: `Bloom & Co - Order #${ORDER_REF}`
+      description: 'Amnesia Ibiza - Order #AMN-2026-08421'
     };
 
     try {
-      const resp = await fetch(`${API_BASE}/api/v1/payments`, {
+      const res = await fetch(`${API_BASE}/api/v1/payments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
-      activePaymentRecord = data;
-    } catch (err) {
-      console.warn('Backend offline or CORS blocked, using direct client simulation:', err);
-      activePaymentRecord = {
+      if (res.ok) {
+        activePayment = await res.json();
+      } else {
+        throw new Error();
+      }
+    } catch (e) {
+      activePayment = {
         payment_id: 'PAY-GO-' + Math.random().toString(36).substr(2, 8).toUpperCase(),
-        status: 'RCVD',
-        bank_id: selectedBank.id,
-        amount: ORDER_AMOUNT,
-        merchant_reference: ORDER_REF,
-        sca_redirect_url: `http://localhost:8088/#authorize?payment_id=SIM-${Date.now()}&bank=${selectedBank.id}&amount=${ORDER_AMOUNT}`
+        sca_redirect_url: `http://localhost:8088/#authorize?payment_id=AMN-${Date.now()}&bank=${selectedBank.id}`
       };
     }
 
-    renderHandoff();
-  }
-
-  function renderHandoff() {
-    setStepper(2);
-    showSubView('handoff');
     handoffTitle.textContent = `Authorize with ${selectedBank.name}`;
+    const url = activePayment.sca_redirect_url || 'https://bank.nl/auth';
+    webBankingLink.href = url;
 
-    const redirectUrl = activePaymentRecord.sca_redirect_url || `https://${selectedBank.id}.bank.nl/auth?ref=${activePaymentRecord.payment_id}`;
-    webBankingLink.href = redirectUrl;
-    appDeepLink.href = redirectUrl;
-
-    // Detect Mobile vs Desktop
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 640;
-    if (isMobile) {
-      mobilePanel.style.display = 'block';
-    } else {
-      mobilePanel.style.display = 'none';
-    }
-    desktopPanel.style.display = 'block';
-
-    // Generate Crisp Vector QR Code Client-side
-    renderQrCode(redirectUrl);
-
-    // Start live polling
-    startPolling(activePaymentRecord.payment_id);
-  }
-
-  function renderQrCode(url) {
-    qrContainer.innerHTML = '';
-    try {
-      if (typeof qrcode === 'function') {
+    // Render QR Code
+    qrBox.innerHTML = '';
+    if (typeof qrcode === 'function') {
+      try {
         const qr = qrcode(0, 'M');
         qr.addData(url);
         qr.make();
-        qrContainer.innerHTML = qr.createSvgTag({ scalable: true });
-        return;
-      }
-    } catch (e) {
-      console.warn('QR code generator error:', e);
+        qrBox.innerHTML = qr.createSvgTag({ scalable: true });
+      } catch(e) {}
     }
-    // High-contrast SVG fallback illustration if qrcode not ready
-    qrContainer.innerHTML = `
-      <svg viewBox="0 0 100 100" width="100%" height="100%">
-        <rect width="100" height="100" fill="#FFFFFF"/>
-        <rect x="10" y="10" width="30" height="30" fill="#000000"/>
-        <rect x="15" y="15" width="20" height="20" fill="#FFFFFF"/>
-        <rect x="20" y="20" width="10" height="10" fill="#000000"/>
-        <rect x="60" y="10" width="30" height="30" fill="#000000"/>
-        <rect x="65" y="15" width="20" height="20" fill="#FFFFFF"/>
-        <rect x="70" y="20" width="10" height="10" fill="#000000"/>
-        <rect x="10" y="60" width="30" height="30" fill="#000000"/>
-        <rect x="15" y="65" width="20" height="20" fill="#FFFFFF"/>
-        <rect x="20" y="70" width="10" height="10" fill="#000000"/>
-        <rect x="50" y="50" width="10" height="10" fill="#000000"/>
-        <rect x="70" y="70" width="15" height="15" fill="#000000"/>
-      </svg>
-    `;
-  }
 
-  // -------------------------------------------------------------
-  // State 3: Polling & Status Feedback
-  // -------------------------------------------------------------
-  function startPolling(paymentId) {
-    stopPolling();
-    pollingInterval = setInterval(async () => {
+    showPane('handoff');
+
+    // Poll payment status
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/v1/payments/${paymentId}`);
-        if (!res.ok) return;
-        const rec = await res.json();
-        if (rec.status === 'ACSC_SETTLED' || rec.status === 'ACCP' || rec.authorized_at) {
-          stopPolling();
-          renderSuccess(rec);
+        const r = await fetch(`${API_BASE}/api/v1/payments/${activePayment.payment_id}`);
+        if (r.ok) {
+          const data = await r.json();
+          if (data.status === 'ACSC_SETTLED' || data.authorized_at) {
+            clearInterval(pollTimer);
+            settleSuccess(data);
+          }
         }
-      } catch (e) {}
+      } catch(e) {}
     }, 2000);
   }
 
-  function stopPolling() {
-    if (pollingInterval) {
-      clearInterval(pollingInterval);
-      pollingInterval = null;
-    }
-  }
+  async function simulateSca() {
+    btnSimulateSca.disabled = true;
+    btnSimulateSca.textContent = '⚡ Settling with Bank...';
 
-  // Simulator CTA click
-  async function simulateBankApproval() {
-    btnSimulateAuth.disabled = true;
-    btnSimulateAuth.textContent = '⚡ Settling with Bank...';
-
-    if (activePaymentRecord && activePaymentRecord.payment_id) {
+    if (activePayment && activePayment.payment_id) {
       try {
-        const res = await fetch(`${API_BASE}/api/v1/payments/${activePaymentRecord.payment_id}/authorize`, {
-          method: 'POST'
-        });
-        if (res.ok) {
-          const settled = await res.json();
-          stopPolling();
-          renderSuccess(settled);
+        const r = await fetch(`${API_BASE}/api/v1/payments/${activePayment.payment_id}/authorize`, { method: 'POST' });
+        if (r.ok) {
+          const data = await r.json();
+          clearInterval(pollTimer);
+          settleSuccess(data);
           return;
         }
-      } catch (e) {}
+      } catch(e) {}
     }
 
-    // Direct fallback simulation
     setTimeout(() => {
-      stopPolling();
-      renderSuccess({
-        payment_id: activePaymentRecord ? activePaymentRecord.payment_id : 'PAY-GO-7265712D',
-        clearing_reference: `SCT-INST-GO-${Date.now()}`,
-        status: 'ACSC_SETTLED',
-        settlement_rail: 'SEPA Instant Credit Transfer (SCT Inst / TIPS)'
+      clearInterval(pollTimer);
+      settleSuccess({
+        clearing_reference: `SCT-INST-GO-${Date.now()}`
       });
     }, 600);
   }
 
-  // -------------------------------------------------------------
-  // State 4: Confirmation & Success Screen
-  // -------------------------------------------------------------
-  function renderSuccess(record) {
-    setStepper(3);
-    showSubView('success');
+  function settleSuccess(data) {
+    showPane('success');
+    rcptClearing.textContent = data.clearing_reference || `SCT-INST-GO-${Date.now()}`;
+    rcptTime.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-    receiptOrderRef.textContent = `#${ORDER_REF}`;
-    receiptPaymentId.textContent = record.payment_id || 'PAY-GO-7265712D';
-    receiptClearingRef.textContent = record.clearing_reference || `SCT-INST-GO-${Date.now()}`;
-    receiptTimestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-    // Auto-redirect countdown
-    let seconds = 5;
-    countdownNum.textContent = seconds;
-    if (redirectCountdownInterval) clearInterval(redirectCountdownInterval);
-    redirectCountdownInterval = setInterval(() => {
-      seconds -= 1;
-      if (seconds <= 0) {
-        clearInterval(redirectCountdownInterval);
-        alert(`Order #${ORDER_REF} paid successfully! Redirecting back to Bloom & Co confirmation.`);
-        showPaymentMethods();
+    let s = 5;
+    countdownVal.textContent = s;
+    if (cdTimer) clearInterval(cdTimer);
+    cdTimer = setInterval(() => {
+      s -= 1;
+      if (s <= 0) {
+        clearInterval(cdTimer);
+        alert('Order AMN-2026-08421 settled successfully! Returning to Amnesia Ibiza.');
+        showPane('methods');
       } else {
-        countdownNum.textContent = seconds;
+        countdownVal.textContent = s;
       }
     }, 1000);
   }
 
-  // -------------------------------------------------------------
-  // Event Listeners & Bootstrapping
-  // -------------------------------------------------------------
-  btnPBBMethod.addEventListener('click', showPayByBankFlow);
-  btnBackMethods.addEventListener('click', showPaymentMethods);
-  btnChangeBank.addEventListener('click', () => {
-    stopPolling();
-    setStepper(1);
-    showSubView('select');
-  });
+  // Event bindings
+  tilePayByBank.onclick = openPayByBank;
+  btnBackToMethods.onclick = () => showPane('methods');
+  btnBackToBanks.onclick = () => {
+    if (pollTimer) clearInterval(pollTimer);
+    showPane('select');
+  };
+  btnContinue.onclick = startHandoff;
+  btnSimulateSca.onclick = simulateSca;
+  btnReturnStore.onclick = () => {
+    if (cdTimer) clearInterval(cdTimer);
+    showPane('methods');
+  };
 
-  searchInput.addEventListener('input', () => {
-    renderBanks();
-  });
-
-  countryTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      countryTabs.forEach(t => {
-        t.classList.remove('active');
-        t.setAttribute('aria-selected', 'false');
-      });
-      tab.classList.add('active');
-      tab.setAttribute('aria-selected', 'true');
-      activeCountry = tab.dataset.country;
+  searchInput.oninput = renderBanks;
+  countryTabs.forEach(t => {
+    t.onclick = () => {
+      countryTabs.forEach(tab => tab.classList.remove('active'));
+      t.classList.add('active');
+      activeCountry = t.dataset.country;
       renderBanks();
-    });
+    };
   });
 
-  btnContinue.addEventListener('click', initiatePayment);
-  btnSimulateAuth.addEventListener('click', simulateBankApproval);
-  btnReturnMerchant.addEventListener('click', () => {
-    if (redirectCountdownInterval) clearInterval(redirectCountdownInterval);
-    alert(`Order #${ORDER_REF} completed. Returning to merchant.`);
-    showPaymentMethods();
-  });
-
-  // Check URL query parameter or hash on load
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('method') === 'pay-by-bank' || window.location.hash.includes('pay-by-bank')) {
-    showPayByBankFlow();
+    openPayByBank();
   }
 
 })();
