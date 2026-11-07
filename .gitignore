@@ -1,0 +1,15 @@
+# Binaries
+pay-by-bank-gateway
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test certs
+certs/*.pem
+certs/*.key

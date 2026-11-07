@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CM.com // Live Bank Wire Telemetry & PISP Egress Inspector</title>
+  
+  <!-- Neo-Raw Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@700;800;900&family=Hanken+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #f2f2f2;
+      --surface: #ffffff;
+      --surface-subtle: #eeeeee;
+      --structural-black: #000000;
+      --vibrant-orange: #ff5f1f;
+      --success-green: #00d66c;
+      --alert-yellow: #ffd600;
+      --error-red: #ba1a1a;
+      --border-thick: 4px solid #000000;
+      --border-mid: 3px solid #000000;
+      --border-thin: 2px solid #000000;
+      --shadow-primary: 6px 6px 0px #000000;
+      --shadow-hover: 2px 2px 0px #000000;
+      --shadow-active: 0px 0px 0px #000000;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border-radius: 0px !important;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--structural-black);
+      font-family: 'Hanken Grotesk', sans-serif;
+      font-weight: 500;
+      line-height: 1.5;
+      padding: 24px;
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--surface);
+      border: var(--border-thick);
+      box-shadow: var(--shadow-primary);
+      padding: 20px 28px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-title {
+      font-family: 'Anybody', sans-serif;
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .badge-orange {
+      background: var(--vibrant-orange);
+      color: var(--structural-black);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border: var(--border-mid);
+      text-transform: uppercase;
+    }
+
+    .badge-green {
+      background: var(--success-green);
+      color: var(--structural-black);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 4px 8px;
+      border: var(--border-thin);
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 460px 1fr;
+      gap: 24px;
+      max-width: 1540px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1180px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .raw-card {
+      background: var(--surface);
+      border: var(--border-thick);
+      box-shadow: var(--shadow-primary);
+      margin-bottom: 24px;
+    }
+
+    .raw-card-header {
+      background: var(--surface);
+      border-bottom: var(--border-thick);
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .raw-card-header h2 {
+      font-family: 'Anybody', sans-serif;
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      text-transform: uppercase;
+    }
+
+    .raw-card-body {
+      padding: 20px;
+    }
+
+    .field-group {
+      margin-bottom: 14px;
+    }
+
+    .field-group label {
+      display: block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .raw-input {
+      width: 100%;
+      background: #ffffff;
+      border: var(--border-thick);
+      padding: 10px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--structural-black);
+      outline: none;
+    }
+
+    .raw-input:focus {
+      background: #fff8f5;
+      border-color: var(--vibrant-orange);
+    }
+
+    .bank-picker-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .bank-option {
+      background: var(--surface-subtle);
+      border: var(--border-thick);
+      padding: 12px;
+      cursor: pointer;
+      transition: all 0.1s ease;
+      user-select: none;
+    }
+
+    .bank-option:hover {
+      box-shadow: var(--shadow-hover);
+      transform: translate(-2px, -2px);
+    }
+
+    .bank-option.selected {
+      background: var(--vibrant-orange);
+      box-shadow: 4px 4px 0px #000000;
+      transform: translate(-2px, -2px);
+    }
+
+    .bank-title {
+      font-family: 'Anybody', sans-serif;
+      font-size: 15px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .bank-meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      margin-top: 3px;
+    }
+
+    .raw-btn {
+      width: 100%;
+      background: var(--vibrant-orange);
+      color: var(--structural-black);
+      border: var(--border-thick);
+      box-shadow: var(--shadow-primary);
+      padding: 16px 20px;
+      font-family: 'Anybody', sans-serif;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: -0.01em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.08s ease;
+    }
+
+    .raw-btn:hover {
+      box-shadow: var(--shadow-hover);
+      transform: translate(4px, 4px);
+    }
+
+    .raw-btn:active {
+      box-shadow: var(--shadow-active);
+      transform: translate(6px, 6px);
+    }
+
+    .raw-btn-white {
+      background: #ffffff;
+      box-shadow: 4px 4px 0px #000000;
+      padding: 10px 14px;
+      font-size: 12px;
+    }
+
+    .wire-terminal {
+      background: #0a0b0d;
+      color: #e6e6e6;
+      border: var(--border-thick);
+      padding: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      line-height: 1.6;
+      overflow-x: auto;
+      margin-bottom: 16px;
+    }
+
+    .terminal-section-title {
+      color: var(--vibrant-orange);
+      font-weight: 800;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      border-bottom: 1px solid #333;
+      padding-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .proof-banner {
+      background: #fff8eb;
+      border: var(--border-thick);
+      padding: 14px 16px;
+      margin-bottom: 16px;
+    }
+
+    .proof-banner h3 {
+      font-family: 'Anybody', sans-serif;
+      font-size: 14px;
+      font-weight: 900;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .proof-banner p {
+      font-size: 13px;
+      color: #333;
+    }
+
+    .telemetry-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .telemetry-row {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .telemetry-box {
+      background: var(--surface-subtle);
+      border: var(--border-thick);
+      padding: 10px 12px;
+    }
+
+    .telemetry-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 800;
+      color: #555;
+      text-transform: uppercase;
+    }
+
+    .telemetry-val {
+      font-family: 'Anybody', sans-serif;
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--structural-black);
+      margin-top: 2px;
+    }
+
+    .status-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 4px 8px;
+      border: var(--border-thin);
+      display: inline-block;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand-title">
+      <span>CM.COM</span>
+      <span class="badge-orange">LIVE BANK WIRE TELEMETRY</span>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <span class="badge-green">REAL TCP/TLS OUTBOUND EGRESS</span>
+      <span style="font-family: 'JetBrains Mono'; font-size: 12px; font-weight: 800;">PORT 8088</span>
+    </div>
+  </header>
+
+  <!-- Main Grid -->
+  <div class="dashboard-grid">
+
+    <!-- Column 1: Config & Bank Dispatcher -->
+    <div>
+      <div class="raw-card">
+        <div class="raw-card-header">
+          <h2>1. Egress Dispatcher</h2>
+          <span class="badge-orange">SELECT TARGET</span>
+        </div>
+        <div class="raw-card-body">
+          <div class="field-group">
+            <label>Target Bank Endpoint:</label>
+            <div class="bank-picker-grid">
+              <div class="bank-option selected" data-bank="ing" onclick="selectBank('ing')">
+                <div class="bank-title">ING Bank</div>
+                <div class="bank-meta">BIC: INGBNL2A</div>
+                <div class="bank-meta">api.sandbox.ing.com</div>
+              </div>
+              <div class="bank-option" data-bank="rabobank" onclick="selectBank('rabobank')">
+                <div class="bank-title">Rabobank</div>
+                <div class="bank-meta">BIC: RABONL2U</div>
+                <div class="bank-meta">api-sandbox.rabobank.nl</div>
+              </div>
+              <div class="bank-option" data-bank="abnamro" onclick="selectBank('abnamro')">
+                <div class="bank-title">ABN AMRO</div>
+                <div class="bank-meta">BIC: ABNANL2A</div>
+                <div class="bank-meta">api-sandbox.abnamro.com</div>
+              </div>
+              <div class="bank-option" data-bank="volksbank" onclick="selectBank('volksbank')">
+                <div class="bank-title">De Volksbank</div>
+                <div class="bank-meta">SNS / ASN / Regio</div>
+                <div class="bank-meta">bancairediensten.nl</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label>Order Reference</label>
+            <input type="text" id="merchantRef" class="raw-input" value="ORD-LIVE-7719">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="field-group">
+              <label>Amount (EUR)</label>
+              <input type="number" id="orderAmount" class="raw-input" value="149.00" step="1.00">
+            </div>
+            <div class="field-group">
+              <label>Creditor IBAN</label>
+              <input type="text" class="raw-input" value="NL99CMCO0123456789" readonly>
+            </div>
+          </div>
+
+          <div style="margin-top: 14px;">
+            <button class="raw-btn" onclick="executeRealEgress()">
+              <span>⚡ EXECUTE LIVE OUTBOUND CALL</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Verification Tools -->
+      <div class="raw-card">
+        <div class="raw-card-header">
+          <h2>Independent Verification (cURL)</h2>
+          <span style="font-family: 'JetBrains Mono'; font-size: 11px; font-weight: 800;">TERMINAL REPRO</span>
+        </div>
+        <div class="raw-card-body">
+          <p style="font-size: 12px; margin-bottom: 8px;">Run this exact command in your Mac terminal to verify the live bank response independently:</p>
+          <div style="background: #111; color: #00ff66; padding: 10px; font-family: 'JetBrains Mono'; font-size: 11px; max-height: 140px; overflow-y: auto; border: var(--border-thin);" id="curlSnippet">
+curl -i -X POST 'https://api.sandbox.ing.com/v2/payments/sepa-credit-transfers' ...
+          </div>
+          <button class="raw-btn raw-btn-white" onclick="copyCurl()" style="margin-top: 10px; width: 100%;">
+            <span>📋 COPY CURL COMMAND TO CLIPBOARD</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Column 2: Live Wire-Level Telemetry -->
+    <div>
+      <div class="raw-card">
+        <div class="raw-card-header">
+          <h2>Live Wire Egress Inspector</h2>
+          <div id="statusBadge" class="status-pill" style="background: #ffe600;">READY TO PROBE</div>
+        </div>
+        <div class="raw-card-body">
+          
+          <!-- Key Metrics -->
+          <div class="telemetry-row">
+            <div class="telemetry-box">
+              <div class="telemetry-label">Target Remote IP</div>
+              <div class="telemetry-val" id="metricIp">--</div>
+            </div>
+            <div class="telemetry-box">
+              <div class="telemetry-label">Round-Trip Latency</div>
+              <div class="telemetry-val" id="metricLatency">-- ms</div>
+            </div>
+            <div class="telemetry-box">
+              <div class="telemetry-label">HTTP Status Code</div>
+              <div class="telemetry-val" id="metricHttp">--</div>
+            </div>
+            <div class="telemetry-box">
+              <div class="telemetry-label">TLS Cipher Suite</div>
+              <div class="telemetry-val" id="metricCipher" style="font-size: 12px; line-height: 1.2; word-break: break-all;">--</div>
+            </div>
+          </div>
+
+          <!-- Proof Banner -->
+          <div class="proof-banner" id="proofBanner">
+            <h3>Proof of Live Connection</h3>
+            <p id="proofText">Select a bank and click 'Execute Live Outbound Call'. The gateway will establish an actual TLS connection to the bank's production API gateway.</p>
+          </div>
+
+          <!-- Terminal 1: Raw Response Headers from Bank -->
+          <div class="wire-terminal">
+            <div class="terminal-section-title">
+              <span>RAW RESPONSE HEADERS DIRECTLY FROM BANK EDGE</span>
+              <span id="termRespStatus">HTTP/1.1 --</span>
+            </div>
+            <pre id="rawRespHeaders">// Live HTTP response headers received from bank gateway will appear here...</pre>
+          </div>
+
+          <!-- Terminal 2: Raw Response Body from Bank -->
+          <div class="wire-terminal">
+            <div class="terminal-section-title">
+              <span>RAW RESPONSE BODY RETURNED BY BANK</span>
+              <span id="termRespBytes">0 BYTES</span>
+            </div>
+            <pre id="rawRespBody">// Bank edge firewall or API gateway payload will appear here...</pre>
+          </div>
+
+          <!-- Terminal 3: Outbound Request Sent -->
+          <div class="wire-terminal">
+            <div class="terminal-section-title">
+              <span>OUTBOUND REQUEST SENT OVER THE WIRE</span>
+              <span id="termReqMethod">POST /v2/payments</span>
+            </div>
+            <pre id="rawReqDump">// Outbound Berlin Group headers + SHA-256 Digest will appear here...</pre>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let currentBank = 'ing';
+    let lastCurlCommand = '';
+
+    function selectBank(bankId) {
+      currentBank = bankId;
+      document.querySelectorAll('.bank-option').forEach(el => el.classList.remove('selected'));
+      document.querySelector(`[data-bank="${bankId}"]`).classList.add('selected');
+    }
+
+    async function executeRealEgress() {
+      const payload = {
+        bank_id: currentBank,
+        env_mode: 'sandbox',
+        amount: parseFloat(document.getElementById('orderAmount').value),
+        currency: 'EUR',
+        merchant_reference: document.getElementById('merchantRef').value,
+        creditor_iban: 'NL99CMCO0123456789',
+        description: 'Payment for order ' + document.getElementById('merchantRef').value
+      };
+
+      document.getElementById('statusBadge').innerText = 'PROBING SOCKET...';
+      document.getElementById('statusBadge').style.background = '#ffd600';
+
+      try {
+        const res = await fetch('/api/v1/payments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        const tele = data.live_telemetry;
+        const tls = tele.tls_info;
+
+        // Update Key Metrics
+        document.getElementById('metricIp').innerText = tls.resolved_ip;
+        document.getElementById('metricLatency').innerText = tele.latency_ms + ' ms';
+        document.getElementById('metricHttp').innerText = tele.status_code + ' ' + tele.reason;
+        document.getElementById('metricCipher').innerText = tls.cipher_suite;
+
+        // Status Badge
+        document.getElementById('statusBadge').innerText = 'CONNECTED (HTTP ' + tele.status_code + ')';
+        document.getElementById('statusBadge').style.background = '#00d66c';
+
+        // Proof Banner
+        document.getElementById('proofBanner').innerHTML = `
+          <h3>✓ VERIFIED LIVE CONNECTION TO ${data.bank.name.toUpperCase()}</h3>
+          <p><strong>Resolved IP:</strong> ${tls.resolved_ip} (Port 443) // <strong>TLS Issuer:</strong> ${tls.cert_issuer}</p>
+          <p style="margin-top: 6px;"><strong>Proof Analysis:</strong> ${data.proof_analysis.why_this_proves_connection}</p>
+        `;
+
+        // Response Headers
+        let respHeadersStr = `HTTP/1.1 ${tele.status_code} ${tele.reason}\n`;
+        for (const [k, v] of Object.entries(tele.response_headers)) {
+          respHeadersStr += `${k}: ${v}\n`;
+        }
+        document.getElementById('rawRespHeaders').innerText = respHeadersStr;
+        document.getElementById('termRespStatus').innerText = `HTTP/1.1 ${tele.status_code}`;
+
+        // Response Body
+        document.getElementById('rawRespBody').innerText = tele.raw_body;
+        document.getElementById('termRespBytes').innerText = tele.raw_body.length + ' BYTES';
+
+        // Outbound Request Dump
+        let reqDump = `POST ${tele.target_url} HTTP/1.1\n`;
+        for (const [k, v] of Object.entries(data.outbound_bank_headers)) {
+          reqDump += `${k}: ${v}\n`;
+        }
+        reqDump += '\n' + JSON.stringify(data.berlin_group_payload, null, 2);
+        document.getElementById('rawReqDump').innerText = reqDump;
+
+        // cURL Command
+        lastCurlCommand = data.curl_verification_command;
+        document.getElementById('curlSnippet').innerText = lastCurlCommand;
+
+      } catch (err) {
+        alert('Network egress failed: ' + err.message);
+      }
+    }
+
+    function copyCurl() {
+      if (!lastCurlCommand) {
+        alert('Please execute a live call first.');
+        return;
+      }
+      navigator.clipboard.writeText(lastCurlCommand);
+      alert('Copied cURL command to clipboard! You can paste and run this in your Mac terminal.');
+    }
+  </script>
+</body>
+</html>
