@@ -5,11 +5,15 @@
 
 # Binaries
 pay-by-bank-gateway
+pay-by-bank-gateway-linux
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+
+# Logs
+*.log
 
 # OS
 .DS_Store
@@ -18,3 +22,8 @@ Thumbs.db
 # Test certs
 certs/*.pem
 certs/*.key
+certs/**/*.pem
+certs/**/*.key
+certs/**/*.csr
+certs/**/*.srl
+certs/**/*.cnf
