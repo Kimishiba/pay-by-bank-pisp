@@ -582,6 +582,11 @@ curl -i -X POST 'https://api.sandbox.ing.com/v2/payments/sepa-credit-transfers' 
 
     function openSCAModalDirectly() {
       if (!currentPaymentRecord) return;
+      const tele = currentPaymentRecord.live_telemetry;
+      if (tele && (tele.status_code >= 400 || tele.status_code === 0 || !tele.success)) {
+        alert('Cannot open authorization portal: Bank responded with error (HTTP ' + tele.status_code + ')');
+        return;
+      }
       const bankKey = (currentPaymentRecord.bank_id || currentBank || 'ing').toLowerCase();
       const meta = BANK_META[bankKey] || { name: (currentPaymentRecord.bank && currentPaymentRecord.bank.name) || 'Bank', app: (currentPaymentRecord.bank && currentPaymentRecord.bank.app_name) || 'Mobile Banking', icon: '🏦', iban: 'NL99CMCO0123456789' };
 
@@ -730,18 +735,45 @@ curl -i -X POST 'https://api.sandbox.ing.com/v2/payments/sepa-credit-transfers' 
       document.getElementById('metricHttp').innerText = tele.status_code + ' ' + tele.reason;
       document.getElementById('metricCipher').innerText = tls.cipher_suite;
 
-      // Status Badge
-      document.getElementById('statusBadge').innerText = 'CONNECTED (HTTP ' + tele.status_code + ')';
-      document.getElementById('statusBadge').style.background = '#00d66c';
-      document.getElementById('statusBadge').style.color = '#000000';
+      // Status Badge & Error State
+      const isBankError = (tele.status_code >= 400 || tele.status_code === 0 || (tele.status_code && !tele.success));
+      if (isBankError) {
+        document.getElementById('statusBadge').innerText = 'BANK ERROR (HTTP ' + tele.status_code + ')';
+        document.getElementById('statusBadge').style.background = '#ffdad6';
+        document.getElementById('statusBadge').style.color = '#ba1a1a';
+      } else {
+        document.getElementById('statusBadge').innerText = 'CONNECTED (HTTP ' + tele.status_code + ')';
+        document.getElementById('statusBadge').style.background = '#00d66c';
+        document.getElementById('statusBadge').style.color = '#000000';
+      }
 
       // Proof Banner
       let proofHtml = `
-        <h3>✓ VERIFIED LIVE CONNECTION TO ${data.bank.name.toUpperCase()}</h3>
+        <h3>${isBankError ? '⚠️ CONNECTION VERIFIED // BANK RESPONDED WITH ERROR' : '✓ VERIFIED LIVE CONNECTION TO ' + data.bank.name.toUpperCase()}</h3>
         <p><strong>Resolved IP:</strong> ${tls.resolved_ip} (Port 443) // <strong>TLS Issuer:</strong> ${tls.cert_issuer}</p>
         <p style="margin-top: 6px;"><strong>Proof Analysis:</strong> ${data.proof_analysis.why_this_proves_connection}</p>
       `;
-      if (data.sca_redirect_url) {
+      if (isBankError) {
+        proofHtml += `
+          <div style="margin-top: 12px; padding: 12px; background: #ffffff; border: var(--border-thick); box-shadow: 2px 2px 0px #000000;">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 800; color: #ba1a1a; text-transform: uppercase;">
+              ⚠️ Strong Customer Authentication (SCA) Unavailable
+            </div>
+            <p style="font-size: 12px; margin: 4px 0 8px 0; color: #5d5f5f;">The bank gateway returned an error response instead of an active SCA authorization challenge.</p>
+            <div class="bank-error-alert" role="alert" style="background: #ffdad6; border: 2px solid #ba1a1a; box-shadow: 2px 2px 0px #000000; padding: 12px 16px; margin-top: 4px; display: flex; align-items: flex-start; gap: 10px; color: #ba1a1a;">
+              <span style="font-size: 18px; line-height: 1.2;">⛔</span>
+              <div style="flex: 1;">
+                <div style="font-family: 'Anybody', sans-serif; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.01em; line-height: 1.3;">
+                  BANK ERROR: HTTP ${tele.status_code}${tele.reason ? ' (' + tele.reason.trim() + ')' : ''}
+                </div>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; margin-top: 4px; line-height: 1.4; color: #ba1a1a;">
+                  ${data.bank.name.toUpperCase()} rejected initiation. Authorization portal button disabled.
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (data.sca_redirect_url) {
         proofHtml += `
           <div style="margin-top: 12px; padding: 12px; background: #ffffff; border: var(--border-thick); box-shadow: 2px 2px 0px #000000;">
             <div style="font-family: 'JetBrains Mono'; font-size: 11px; font-weight: 800; color: #ff5f1f; text-transform: uppercase;">

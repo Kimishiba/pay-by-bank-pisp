@@ -289,18 +289,18 @@ func (c *INGClient) GetAccessToken() (string, error) {
 	return c.cachedToken, nil
 }
 
-func (c *INGClient) SignJWS(method, path, digestHeader string) (string, error) {
+func (c *INGClient) SignJWS(method, path, digestHeader, dateStr string) (string, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
 	headerObj := map[string]interface{}{
+		"alg":      "PS256",
 		"b64":      false,
 		"x5t#S256": c.signingCertHash,
 		"crit":     []string{"sigT", "sigD", "b64"},
 		"sigT":     now,
 		"sigD": map[string]interface{}{
-			"pars": []string{"(request-target)", "digest", "content-type"},
+			"pars": []string{"(request-target)", "date", "digest", "content-type"},
 			"mId":  "http://uri.etsi.org/19182/HttpHeaders",
 		},
-		"alg": "PS256",
 	}
 	hdrJSON, err := json.Marshal(headerObj)
 	if err != nil {
@@ -308,7 +308,7 @@ func (c *INGClient) SignJWS(method, path, digestHeader string) (string, error) {
 	}
 	hdrB64 := base64.RawURLEncoding.EncodeToString(hdrJSON)
 
-	signingString := fmt.Sprintf("(request-target): %s %s\ndigest: %s\ncontent-type: application/json", strings.ToLower(method), path, digestHeader)
+	signingString := fmt.Sprintf("(request-target): %s %s\ndate: %s\ndigest: %s\ncontent-type: application/json", strings.ToLower(method), path, dateStr, digestHeader)
 	dataToSign := fmt.Sprintf("%s.%s", hdrB64, signingString)
 
 	hData := sha256.Sum256([]byte(dataToSign))
@@ -328,9 +328,9 @@ func (c *INGClient) ExecutePayment(targetURL string, payloadBytes []byte, reqID 
 	digestB64 := base64.StdEncoding.EncodeToString(h[:])
 	digestHeader := "SHA-256=" + digestB64
 
-	token, _ := c.GetAccessToken()
-	jws, _ := c.SignJWS("POST", u.Path, digestHeader)
 	dateStr := time.Now().UTC().Format(http.TimeFormat)
+	token, _ := c.GetAccessToken()
+	jws, _ := c.SignJWS("POST", u.Path, digestHeader, dateStr)
 
 	outboundHeaders := map[string]string{
 		"Host":             u.Host,
@@ -340,7 +340,7 @@ func (c *INGClient) ExecutePayment(targetURL string, payloadBytes []byte, reqID 
 		"Date":             dateStr,
 		"X-Request-ID":     reqID,
 		"PSU-IP-Address":   "82.161.45.12",
-		"TPP-Redirect-URI": "http://localhost:8088/#success",
+		"TPP-Redirect-URI": "https://paybybank.homeassistantkrooswijkhof.duckdns.org/redirect.html",
 		"Content-Type":     "application/json",
 		"Accept":           "application/json",
 	}
@@ -625,6 +625,8 @@ type RevolutClient struct {
 	client         *http.Client
 	clientID       string
 	financialID    string
+	signingKey     *rsa.PrivateKey
+	keyID          string
 	tokenMutex     sync.Mutex
 	cachedToken    string
 	tokenExpiresAt time.Time
@@ -654,11 +656,60 @@ func NewRevolutClient() (*RevolutClient, error) {
 		Timeout:   12 * time.Second,
 	}
 
-	return &RevolutClient{
+	revoClient := &RevolutClient{
 		client:      httpClient,
 		clientID:    "94b60cd5-7dec-4484-9d5d-d720055da78d",
 		financialID: "001580000103UAvAAM",
-	}, nil
+		keyID:       "2kiXQyo0tedjW2somjSgH7",
+	}
+
+	keyBytes, err := os.ReadFile(tlsKeyFile)
+	if err == nil {
+		block, _ := pem.Decode(keyBytes)
+		if block != nil {
+			privKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+			if err == nil {
+				if rsaKey, ok := privKey.(*rsa.PrivateKey); ok {
+					revoClient.signingKey = rsaKey
+				}
+			} else {
+				if rsaKey, err := x509.ParsePKCS1PrivateKey(block.Bytes); err == nil {
+					revoClient.signingKey = rsaKey
+				}
+			}
+		}
+	}
+
+	return revoClient, nil
+}
+
+func (c *RevolutClient) SignJWS(payload []byte) (string, error) {
+	if c.signingKey == nil {
+		return "", fmt.Errorf("revolut signing key not loaded")
+	}
+	header := map[string]interface{}{
+		"alg":                           "RS256",
+		"kid":                           c.keyID,
+		"b64":                           false,
+		"http://openbanking.org.uk/iat": time.Now().Unix(),
+		"http://openbanking.org.uk/iss": fmt.Sprintf("%s/%s", c.financialID, c.clientID),
+		"crit":                          []string{"b64", "http://openbanking.org.uk/iat", "http://openbanking.org.uk/iss"},
+	}
+	hdrJSON, err := json.Marshal(header)
+	if err != nil {
+		return "", err
+	}
+	hdrB64 := base64.RawURLEncoding.EncodeToString(hdrJSON)
+
+	// RFC 7797 detached payload with b64: false
+	signingInput := append([]byte(hdrB64+"."), payload...)
+	h := sha256.Sum256(signingInput)
+	sigBytes, err := rsa.SignPKCS1v15(rand.Reader, c.signingKey, crypto.SHA256, h[:])
+	if err != nil {
+		return "", err
+	}
+	sigB64 := base64.RawURLEncoding.EncodeToString(sigBytes)
+	return fmt.Sprintf("%s..%s", hdrB64, sigB64), nil
 }
 
 func (c *RevolutClient) GetAccessToken() (string, error) {
@@ -733,6 +784,11 @@ func (c *RevolutClient) ExecutePayment(targetURL string, payloadBytes []byte, re
 		outboundHeaders["Authorization"] = "Bearer " + token
 	}
 
+	jwsSig, jwsErr := c.SignJWS(payloadBytes)
+	if jwsErr == nil && jwsSig != "" {
+		outboundHeaders["x-jws-signature"] = jwsSig
+	}
+
 	telemetry := LiveTelemetry{
 		TargetURL:         targetURL,
 		Hostname:          hostname,
@@ -771,6 +827,7 @@ func (c *RevolutClient) ExecutePayment(targetURL string, payloadBytes []byte, re
 
 	telemetry.StatusCode = resp.StatusCode
 	telemetry.Reason = resp.Status
+	telemetry.Success = resp.StatusCode >= 200 && resp.StatusCode < 300
 
 	for k, v := range resp.Header {
 		if len(v) > 0 {
@@ -942,6 +999,7 @@ func (c *ABNAMROClient) ExecutePayment(targetURL string, payloadBytes []byte, re
 
 	telemetry.StatusCode = resp.StatusCode
 	telemetry.Reason = resp.Status
+	telemetry.Success = resp.StatusCode >= 200 && resp.StatusCode < 300
 
 	for k, v := range resp.Header {
 		if len(v) > 0 {
@@ -1069,7 +1127,7 @@ func executeLiveEgress(targetURL string, headers map[string]string, payloadBytes
 
 	telemetry.StatusCode = resp.StatusCode
 	telemetry.Reason = resp.Status
-	telemetry.Success = resp.StatusCode < 400
+	telemetry.Success = resp.StatusCode >= 200 && resp.StatusCode < 300
 
 	for k, v := range resp.Header {
 		if len(v) > 0 {
