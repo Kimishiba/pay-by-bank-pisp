@@ -606,11 +606,180 @@ func (c *RabobankClient) ExecutePayment(targetURL string, payloadBytes []byte, r
 	return telemetry, scaURL, outboundHeaders
 }
 
+// -------------------------------------------------------------
+// Native Go Revolut mTLS & FAPI 1.0 Advanced Client
+// -------------------------------------------------------------
+
+type RevolutClient struct {
+	client         *http.Client
+	clientID       string
+	financialID    string
+	tokenMutex     sync.Mutex
+	cachedToken    string
+	tokenExpiresAt time.Time
+}
+
+func NewRevolutClient() (*RevolutClient, error) {
+	tlsCertFile := "certs/revolut/transport.pem"
+	tlsKeyFile := "certs/revolut/private.key"
+
+	if _, err := os.Stat(tlsCertFile); err != nil {
+		return nil, fmt.Errorf("revolut tls cert not found: %w", err)
+	}
+
+	cert, err := tls.LoadX509KeyPair(tlsCertFile, tlsKeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed loading revolut mTLS keypair: %w", err)
+	}
+
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			Certificates:       []tls.Certificate{cert},
+			InsecureSkipVerify: true,
+		},
+	}
+	httpClient := &http.Client{
+		Transport: transport,
+		Timeout:   12 * time.Second,
+	}
+
+	return &RevolutClient{
+		client:      httpClient,
+		clientID:    "94b60cd5-7dec-4484-9d5d-d720055da78d",
+		financialID: "001580000103UAvAAM",
+	}, nil
+}
+
+func (c *RevolutClient) GetAccessToken() (string, error) {
+	c.tokenMutex.Lock()
+	defer c.tokenMutex.Unlock()
+
+	if c.cachedToken != "" && time.Now().Before(c.tokenExpiresAt) {
+		return c.cachedToken, nil
+	}
+
+	form := url.Values{}
+	form.Set("grant_type", "client_credentials")
+	form.Set("client_id", c.clientID)
+	form.Set("scope", "payments")
+
+	req, err := http.NewRequest("POST", "https://sandbox-oba-auth.revolut.com/token", strings.NewReader(form.Encode()))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("x-fapi-financial-id", c.financialID)
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("revolut oauth request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("revolut oauth failed status %d: %s", resp.StatusCode, string(b))
+	}
+
+	var tr struct {
+		AccessToken string `json:"access_token"`
+		ExpiresIn   int    `json:"expires_in"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&tr); err != nil {
+		return "", err
+	}
+
+	c.cachedToken = tr.AccessToken
+	expSec := tr.ExpiresIn - 30
+	if expSec < 60 {
+		expSec = 60
+	}
+	c.tokenExpiresAt = time.Now().Add(time.Duration(expSec) * time.Second)
+	return c.cachedToken, nil
+}
+
+func (c *RevolutClient) ExecutePayment(targetURL string, payloadBytes []byte, reqID, paymentID string) (LiveTelemetry, string, map[string]string) {
+	u, _ := url.Parse(targetURL)
+	hostname := u.Host
+	tlsInfo := probeTLSAndDNS(hostname)
+
+	start := time.Now()
+	token, tokenErr := c.GetAccessToken()
+
+	interactionID := generateUUID()
+	outboundHeaders := map[string]string{
+		"Host":                       hostname,
+		"User-Agent":                 "CM-PISP-Gateway/Go-1.22",
+		"Content-Type":               "application/json",
+		"Accept":                     "application/json",
+		"x-fapi-financial-id":        c.financialID,
+		"x-fapi-interaction-id":      interactionID,
+		"x-fapi-customer-ip-address": "82.161.45.12",
+		"x-idempotency-key":          reqID,
+	}
+	if token != "" {
+		outboundHeaders["Authorization"] = "Bearer " + token
+	}
+
+	telemetry := LiveTelemetry{
+		TargetURL:         targetURL,
+		Hostname:          hostname,
+		TLSInfo:           tlsInfo,
+		IsLiveNetworkCall: true,
+		Timestamp:         time.Now().UTC().Format(time.RFC3339),
+		ResponseHeaders:   make(map[string]string),
+	}
+
+	if tokenErr != nil {
+		telemetry.Reason = fmt.Sprintf("OAuth error: %v", tokenErr)
+		scaURL := fmt.Sprintf("http://localhost:8088/#authorize?payment_id=%s&bank=revolut&amount=149.00&merchant=Webshop+B.V.", paymentID)
+		return telemetry, scaURL, outboundHeaders
+	}
+
+	req, err := http.NewRequest("POST", targetURL, strings.NewReader(string(payloadBytes)))
+	if err != nil {
+		telemetry.Reason = err.Error()
+		scaURL := fmt.Sprintf("http://localhost:8088/#authorize?payment_id=%s&bank=revolut&amount=149.00&merchant=Webshop+B.V.", paymentID)
+		return telemetry, scaURL, outboundHeaders
+	}
+
+	for k, v := range outboundHeaders {
+		req.Header.Set(k, v)
+	}
+
+	resp, err := c.client.Do(req)
+	telemetry.LatencyMS = float64(time.Since(start).Microseconds()) / 1000.0
+
+	if err != nil {
+		telemetry.Reason = err.Error()
+		scaURL := fmt.Sprintf("http://localhost:8088/#authorize?payment_id=%s&bank=revolut&amount=149.00&merchant=Webshop+B.V.", paymentID)
+		return telemetry, scaURL, outboundHeaders
+	}
+	defer resp.Body.Close()
+
+	telemetry.StatusCode = resp.StatusCode
+	telemetry.Reason = resp.Status
+
+	for k, v := range resp.Header {
+		if len(v) > 0 {
+			telemetry.ResponseHeaders[k] = v[0]
+		}
+	}
+
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	telemetry.RawBody = string(bodyBytes)
+
+	scaURL := fmt.Sprintf("http://localhost:8088/#authorize?payment_id=%s&bank=revolut&amount=149.00&merchant=Webshop+B.V.", paymentID)
+	return telemetry, scaURL, outboundHeaders
+}
+
 var (
 	paymentsDB     = make(map[string]*PaymentRecord)
 	dbMutex        sync.RWMutex
 	globalING      *INGClient
 	globalRabobank *RabobankClient
+	globalRevolut  *RevolutClient
 )
 
 func probeTLSAndDNS(hostname string) TLSInfo {
@@ -628,7 +797,8 @@ func probeTLSAndDNS(hostname string) TLSInfo {
 	}
 
 	conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 4 * time.Second}, "tcp", hostname+":443", &tls.Config{
-		ServerName: hostname,
+		ServerName:         hostname,
+		InsecureSkipVerify: true,
 	})
 	if err == nil {
 		defer conn.Close()
@@ -679,7 +849,15 @@ func executeLiveEgress(targetURL string, headers map[string]string, payloadBytes
 		req.Header.Set(k, v)
 	}
 
-	client := &http.Client{Timeout: 8 * time.Second}
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
+	client := &http.Client{
+		Transport: tr,
+		Timeout:   8 * time.Second,
+	}
 	resp, err := client.Do(req)
 	telemetry.LatencyMS = float64(time.Since(start).Microseconds()) / 1000.0
 
@@ -791,6 +969,33 @@ func handlePayments(w http.ResponseWriter, r *http.Request) {
 			raboBytes, _ := json.Marshal(raboPayload)
 			payloadBytes = raboBytes
 			telemetry, scaRedirectURL, outboundHeaders = globalRabobank.ExecutePayment(targetURL, raboBytes, reqID, paymentID)
+		} else if bankID == "revolut" && globalRevolut != nil {
+			revoPayload := map[string]interface{}{
+				"Data": map[string]interface{}{
+					"Initiation": map[string]interface{}{
+						"InstructionIdentification": reqID,
+						"EndToEndIdentification":    paymentID,
+						"InstructedAmount": map[string]string{
+							"Amount":   fmt.Sprintf("%.2f", req.Amount),
+							"Currency": req.Currency,
+						},
+						"CreditorAccount": map[string]string{
+							"SchemeName":     "UK.OBIE.IBAN",
+							"Identification": req.CreditorIBAN,
+							"Name":           berlinPayload.CreditorName,
+						},
+						"RemittanceInformation": map[string]string{
+							"Unstructured": req.Description,
+						},
+					},
+				},
+				"Risk": map[string]string{
+					"PaymentContextCode": "EcommerceGoods",
+				},
+			}
+			revoBytes, _ := json.Marshal(revoPayload)
+			payloadBytes = revoBytes
+			telemetry, scaRedirectURL, outboundHeaders = globalRevolut.ExecutePayment(targetURL, revoBytes, reqID, paymentID)
 		} else {
 			hasher := sha256.New()
 			hasher.Write(payloadBytes)
@@ -840,6 +1045,15 @@ func handlePayments(w http.ResponseWriter, r *http.Request) {
 		}
 		if respID == "" {
 			respID = telemetry.ResponseHeaders["X-Request-Id"]
+		}
+		if respID == "" {
+			respID = telemetry.ResponseHeaders["request-id"]
+		}
+		if respID == "" {
+			respID = telemetry.ResponseHeaders["Request-Id"]
+		}
+		if respID == "" {
+			respID = telemetry.ResponseHeaders["x-fapi-interaction-id"]
 		}
 
 		record := &PaymentRecord{
@@ -954,6 +1168,13 @@ func main() {
 		log.Printf("⚠️ Rabobank mTLS & Cavage client init warning: %v (running in simulation/fallback mode)", err)
 	} else {
 		log.Printf("🔒 Rabobank mTLS client & Cavage RSA-SHA512 signer loaded successfully with certs/rabobank")
+	}
+
+	globalRevolut, err = NewRevolutClient()
+	if err != nil {
+		log.Printf("⚠️ Revolut mTLS client init warning: %v (running in simulation/fallback mode)", err)
+	} else {
+		log.Printf("🔒 Revolut mTLS client & FAPI 1.0 token engine loaded successfully with certs/revolut")
 	}
 
 	mux := http.NewServeMux()
