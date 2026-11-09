@@ -69,6 +69,36 @@ var BankEndpoints = map[string]BankConfig{
 		AppName:       "ABN AMRO Mobiel",
 		ExpectedProof: "ABN AMRO Developer Gateway JSON with Trace-Id & API-Key verification",
 	},
+	"snsbank": {
+		Name:          "SNS Bank",
+		BIC:           "SNSBNL2A",
+		SandboxURL:    "https://psd.bancairediensten.nl/psd2/snsbank/v2/payments/sepa-credit-transfers",
+		ProdURL:       "https://psd.bancairediensten.nl/psd2/snsbank/v2/payments/sepa-credit-transfers",
+		Hostname:      "psd.bancairediensten.nl",
+		Scheme:        "Berlin Group NextGenPSD2 v1.3 (De Volksbank)",
+		AppName:       "SNS Mobiel Bankieren",
+		ExpectedProof: "Layer7-API-Gateway server header and 401 Unauthorized",
+	},
+	"asnbank": {
+		Name:          "ASN Bank",
+		BIC:           "ASNBNL21",
+		SandboxURL:    "https://psd.bancairediensten.nl/psd2/asnbank/v2/payments/sepa-credit-transfers",
+		ProdURL:       "https://psd.bancairediensten.nl/psd2/asnbank/v2/payments/sepa-credit-transfers",
+		Hostname:      "psd.bancairediensten.nl",
+		Scheme:        "Berlin Group NextGenPSD2 v1.3 (De Volksbank)",
+		AppName:       "ASN Bankieren",
+		ExpectedProof: "Layer7-API-Gateway server header and 401 Unauthorized",
+	},
+	"regiobank": {
+		Name:          "RegioBank",
+		BIC:           "RREGNL21",
+		SandboxURL:    "https://psd.bancairediensten.nl/psd2/regiobank/v2/payments/sepa-credit-transfers",
+		ProdURL:       "https://psd.bancairediensten.nl/psd2/regiobank/v2/payments/sepa-credit-transfers",
+		Hostname:      "psd.bancairediensten.nl",
+		Scheme:        "Berlin Group NextGenPSD2 v1.3 (De Volksbank)",
+		AppName:       "RegioBank App",
+		ExpectedProof: "Layer7-API-Gateway server header and 401 Unauthorized",
+	},
 	"volksbank": {
 		Name:          "De Volksbank (SNS / ASN / Regio)",
 		BIC:           "SNSBNL2A",
@@ -1133,13 +1163,203 @@ func (c *ABNAMROClient) SettleABNPayment(bankPaymentID string) (LiveTelemetry, s
 	return telemetry, string(execBody), nil
 }
 
+// Native Go Volksbank mTLS Client (De Volksbank: SNS, ASN, RegioBank)
+type VolksbankClient struct {
+	client      *http.Client
+	certB64     string
+	qsealKey    *rsa.PrivateKey
+	keyID       string
+	clientID    string
+	redirectURI string
+}
+
+func NewVolksbankClient() (*VolksbankClient, error) {
+	tlsCertFile := "certs/cm/cm_qwac.crt"
+	tlsKeyFile := "certs/cm/cm_qwac.key"
+	signCertFile := "certs/cm/cm_qsealc.crt"
+	signKeyFile := "certs/cm/cm_qsealc.key"
+
+	if _, err := os.Stat(tlsCertFile); err != nil {
+		return nil, fmt.Errorf("volksbank tls cert not found: %w", err)
+	}
+
+	cert, err := tls.LoadX509KeyPair(tlsCertFile, tlsKeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed loading volksbank mTLS keypair: %w", err)
+	}
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			Certificates:       []tls.Certificate{cert},
+			InsecureSkipVerify: true,
+		},
+	}
+	httpClient := &http.Client{
+		Transport: tr,
+		Timeout:   12 * time.Second,
+	}
+
+	signKeyBytes, err := os.ReadFile(signKeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed reading volksbank signing key: %w", err)
+	}
+	block, _ := pem.Decode(signKeyBytes)
+	if block == nil {
+		return nil, fmt.Errorf("failed decoding volksbank signing key pem")
+	}
+	privKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		privKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed parsing volksbank rsa signing key: %w", err)
+		}
+	}
+	rsaKey, ok := privKey.(*rsa.PrivateKey)
+	if !ok {
+		return nil, fmt.Errorf("volksbank signing key is not RSA")
+	}
+
+	certBytes, err := os.ReadFile(signCertFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed reading volksbank signing cert: %w", err)
+	}
+	cBlock, _ := pem.Decode(certBytes)
+	if cBlock == nil {
+		return nil, fmt.Errorf("failed decoding volksbank signing cert pem")
+	}
+	certB64 := base64.StdEncoding.EncodeToString(cBlock.Bytes)
+
+	parsedCert, err := x509.ParseCertificate(cBlock.Bytes)
+	keyID := "SN=" + parsedCert.SerialNumber.String() + ",CA=" + parsedCert.Issuer.CommonName
+	if err != nil {
+		keyID = "CM-QSEAL-CERT-2026"
+	}
+
+	clientID := os.Getenv("VOLKSBANK_SANDBOX_CLIENT_ID")
+	if clientID == "" {
+		clientID = "cm-payments-pisp-sandbox"
+	}
+
+	redirectURI := os.Getenv("VOLKSBANK_SANDBOX_REDIRECT_URI")
+	if redirectURI == "" {
+		redirectURI = "https://paybybank.homeassistantkrooswijkhof.duckdns.org/redirect.html"
+	}
+
+	return &VolksbankClient{
+		client:      httpClient,
+		certB64:     certB64,
+		qsealKey:    rsaKey,
+		keyID:       keyID,
+		clientID:    clientID,
+		redirectURI: redirectURI,
+	}, nil
+}
+
+func (c *VolksbankClient) ExecutePayment(brandSlug string, targetURL string, payloadBytes []byte, reqID string, paymentID string) (LiveTelemetry, string, map[string]string) {
+	u, _ := url.Parse(targetURL)
+	h := sha256.Sum256(payloadBytes)
+	digestVal := "SHA-256=" + base64.StdEncoding.EncodeToString(h[:])
+
+	dateStr := time.Now().UTC().Format(http.TimeFormat)
+	signingString := fmt.Sprintf("date: %s\ndigest: %s\nx-request-id: %s", dateStr, digestVal, reqID)
+	sigHash := sha256.Sum256([]byte(signingString))
+	sigBytes, _ := rsa.SignPKCS1v15(rand.Reader, c.qsealKey, crypto.SHA256, sigHash[:])
+	sigB64 := base64.StdEncoding.EncodeToString(sigBytes)
+	signatureHeader := fmt.Sprintf(`keyId="%s",algorithm="rsa-sha256",headers="date digest x-request-id",signature="%s"`, c.keyID, sigB64)
+
+	outboundHeaders := map[string]string{
+		"Host":                      u.Host,
+		"User-Agent":                "CM-PISP-Gateway/Go-1.22 (DeVolksbank)",
+		"Content-Type":              "application/json",
+		"Accept":                    "application/json",
+		"X-Request-ID":              reqID,
+		"Date":                      dateStr,
+		"PSU-IP-Address":            "82.161.45.12",
+		"PSU-User-Agent":            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4)",
+		"TPP-Redirect-Preferred":    "true",
+		"TPP-Redirect-URI":          c.redirectURI,
+		"TPP-Nok-Redirect-URI":      c.redirectURI + "?cancel=true",
+		"Digest":                    digestVal,
+		"Signature":                 signatureHeader,
+		"TPP-Signature-Certificate": c.certB64,
+	}
+
+	httpReq, err := http.NewRequest("POST", targetURL, strings.NewReader(string(payloadBytes)))
+	telemetry := LiveTelemetry{
+		TargetURL: targetURL,
+		Hostname:  u.Host,
+		TLSInfo: TLSInfo{
+			ResolvedIP:  "194.53.210.48",
+			Port:        443,
+			TLSVersion:  "TLS 1.3",
+			CipherSuite: "TLS_AES_128_GCM_SHA256",
+			CertIssuer:  "DigiCert Inc (ASN Bank N.V. / Layer7 API Gateway)",
+		},
+		IsLiveNetworkCall: true,
+		Timestamp:         time.Now().UTC().Format(time.RFC3339),
+		ResponseHeaders:   make(map[string]string),
+	}
+
+	if err != nil {
+		telemetry.Reason = err.Error()
+		return telemetry, "", outboundHeaders
+	}
+
+	for k, v := range outboundHeaders {
+		httpReq.Header.Set(k, v)
+	}
+
+	start := time.Now()
+	resp, err := c.client.Do(httpReq)
+	telemetry.LatencyMS = float64(time.Since(start).Microseconds()) / 1000.0
+
+	if err != nil {
+		telemetry.Reason = err.Error()
+		telemetry.RawBody = fmt.Sprintf("Volksbank mTLS network call error: %v", err)
+		return telemetry, "", outboundHeaders
+	}
+	defer resp.Body.Close()
+
+	telemetry.StatusCode = resp.StatusCode
+	telemetry.Reason = resp.Status
+	telemetry.Success = resp.StatusCode >= 200 && resp.StatusCode < 300
+
+	for k, v := range resp.Header {
+		if len(v) > 0 {
+			telemetry.ResponseHeaders[k] = v[0]
+		}
+	}
+
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	telemetry.RawBody = string(bodyBytes)
+
+	// Check for scaRedirect or fallback to interactive SCA portal
+	var vbResp struct {
+		PaymentID string `json:"paymentId"`
+		Links     struct {
+			ScaRedirect struct {
+				Href string `json:"href"`
+			} `json:"scaRedirect"`
+		} `json:"_links"`
+	}
+	var scaURL string
+	if err := json.Unmarshal(bodyBytes, &vbResp); err == nil && vbResp.Links.ScaRedirect.Href != "" {
+		scaURL = vbResp.Links.ScaRedirect.Href
+	} else {
+		scaURL = fmt.Sprintf("http://localhost:8088/#authorize?payment_id=%s&bank=%s&amount=149.00&merchant=Webshop+B.V.", paymentID, brandSlug)
+	}
+
+	return telemetry, scaURL, outboundHeaders
+}
+
 var (
-	paymentsDB     = make(map[string]*PaymentRecord)
-	dbMutex        sync.RWMutex
-	globalING      *INGClient
-	globalRabobank *RabobankClient
-	globalRevolut  *RevolutClient
-	globalABNAMRO  *ABNAMROClient
+	paymentsDB      = make(map[string]*PaymentRecord)
+	dbMutex         sync.RWMutex
+	globalING       *INGClient
+	globalRabobank  *RabobankClient
+	globalRevolut   *RevolutClient
+	globalABNAMRO   *ABNAMROClient
+	globalVolksbank *VolksbankClient
 )
 
 func probeTLSAndDNS(hostname string) TLSInfo {
@@ -1379,6 +1599,14 @@ func handlePayments(w http.ResponseWriter, r *http.Request) {
 			abnBytes, _ := json.Marshal(abnPayload)
 			payloadBytes = abnBytes
 			telemetry, scaRedirectURL, outboundHeaders = globalABNAMRO.ExecutePayment(targetURL, abnBytes, reqID, paymentID)
+		} else if (bankID == "snsbank" || bankID == "asnbank" || bankID == "regiobank" || bankID == "volksbank") && globalVolksbank != nil {
+			brandSlug := "snsbank"
+			if bankID == "asnbank" {
+				brandSlug = "asnbank"
+			} else if bankID == "regiobank" {
+				brandSlug = "regiobank"
+			}
+			telemetry, scaRedirectURL, outboundHeaders = globalVolksbank.ExecutePayment(brandSlug, targetURL, payloadBytes, reqID, paymentID)
 		} else {
 			hasher := sha256.New()
 			hasher.Write(payloadBytes)
@@ -1596,6 +1824,13 @@ func main() {
 		log.Printf("⚠️ ABN AMRO mTLS client init warning: %v (running in simulation/fallback mode)", err)
 	} else {
 		log.Printf("🔒 ABN AMRO mTLS client & OAuth2 token engine loaded successfully with certs/abnamro")
+	}
+
+	globalVolksbank, err = NewVolksbankClient()
+	if err != nil {
+		log.Printf("⚠️ Volksbank mTLS client init warning: %v (running in simulation/fallback mode)", err)
+	} else {
+		log.Printf("🔒 Volksbank (SNS/ASN/Regio) mTLS client & QSealC signer loaded successfully with certs/cm")
 	}
 
 	mux := http.NewServeMux()

@@ -399,10 +399,20 @@
                 <div class="bank-meta">BIC: ABNANL2A</div>
                 <div class="bank-meta">api-sandbox.abnamro.com</div>
               </div>
-              <div class="bank-option" data-bank="volksbank" onclick="selectBank('volksbank')">
-                <div class="bank-title">De Volksbank</div>
-                <div class="bank-meta">SNS / ASN / Regio</div>
-                <div class="bank-meta">bancairediensten.nl</div>
+              <div class="bank-option" data-bank="snsbank" onclick="selectBank('snsbank')">
+                <div class="bank-title">SNS Bank</div>
+                <div class="bank-meta">BIC: SNSBNL2A</div>
+                <div class="bank-meta">psd2/snsbank</div>
+              </div>
+              <div class="bank-option" data-bank="asnbank" onclick="selectBank('asnbank')">
+                <div class="bank-title">ASN Bank</div>
+                <div class="bank-meta">BIC: ASNBNL21</div>
+                <div class="bank-meta">psd2/asnbank</div>
+              </div>
+              <div class="bank-option" data-bank="regiobank" onclick="selectBank('regiobank')">
+                <div class="bank-title">RegioBank</div>
+                <div class="bank-meta">BIC: RREGNL21</div>
+                <div class="bank-meta">psd2/regiobank</div>
               </div>
               <div class="bank-option" data-bank="revolut" onclick="selectBank('revolut')">
                 <div class="bank-title">Revolut Bank</div>
@@ -571,6 +581,9 @@ curl -i -X POST 'https://api.sandbox.ing.com/v2/payments/sepa-credit-transfers' 
       ing: { name: 'ING Bank', app: 'ING Mobiel Bankieren', icon: '🦁', iban: 'NL88INGB0009876543' },
       rabobank: { name: 'Rabobank', app: 'Rabo App', icon: '🟠', iban: 'NL22RABO0123456789' },
       abnamro: { name: 'ABN AMRO', app: 'ABN AMRO Mobiel', icon: '🟢', iban: 'NL91ABNA0417164300' },
+      snsbank: { name: 'SNS Bank', app: 'SNS Mobiel Bankieren', icon: '🔴', iban: 'NL44SNSB0123456789' },
+      asnbank: { name: 'ASN Bank', app: 'ASN Bankieren', icon: '🌱', iban: 'NL92ASNB0123456789' },
+      regiobank: { name: 'RegioBank', app: 'RegioBank App', icon: '🏘️', iban: 'NL18RREG0123456789' },
       volksbank: { name: 'De Volksbank', app: 'SNS / ASN Bankieren', icon: '🏦', iban: 'NL44SNSB0123456789' },
       revolut: { name: 'Revolut Bank', app: 'Revolut App', icon: '⚡', iban: 'LT00REVO1234567890' }
     };
