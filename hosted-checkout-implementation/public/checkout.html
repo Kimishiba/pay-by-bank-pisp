@@ -407,6 +407,10 @@
 
       <!-- PANE: credit / debit card with live card preview -->
       <div class="pane" id="pane-card">
+        <button type="button" class="back-to-methods-btn" id="btn-back-card">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+          <span>Choose another payment method</span>
+        </button>
         <div class="cc-scene" aria-hidden="true">
           <div class="cc-flip" id="cc-flip" data-brand="">
             <div class="cc-face cc-front">
@@ -463,6 +467,10 @@
 
       <!-- PANE: Bancontact (QR + card, one above the other) -->
       <div class="pane" id="pane-bancontact">
+        <button type="button" class="back-to-methods-btn" id="btn-back-bancontact">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+          <span>Choose another payment method</span>
+        </button>
         <div class="bc-section" role="group" aria-label="Bancontact Pay">
           <div class="bc-head">
             <span class="bc-logo"><img src="assets/bancontact.svg" alt=""></span>
@@ -516,6 +524,10 @@
 
       <!-- PANE: Pay by bank, bank selection -->
       <div class="pane" id="pane-pbb-select">
+        <button type="button" class="back-to-methods-btn" id="btn-back-to-methods">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+          <span>Choose another payment method</span>
+        </button>
         <div class="pbb-header">
           <div>
             <h3 class="pbb-title">Pay by bank</h3>
@@ -561,6 +573,10 @@
 
       <!-- PANE: settlement confirmed / receipt (shared by all methods) -->
       <div class="pane pane-success" id="pane-success">
+        <button type="button" class="back-to-methods-btn" id="btn-back-success">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+          <span>Back to payment methods</span>
+        </button>
         <div class="check-green-circle">
           <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
@@ -1087,6 +1103,17 @@
     e.preventDefault();
     goToMerchant();
   });
+  $('btn-back-card').onclick = function () {
+    resetCard();
+    showPane('methods');
+  };
+  $('btn-back-bancontact').onclick = function () {
+    if (pollTimer) clearInterval(pollTimer);
+    showPane('methods');
+  };
+  $('btn-back-to-methods').onclick = function () {
+    showPane('methods');
+  };
   $('btn-back-to-banks').onclick = function () {
     if (pollTimer) clearInterval(pollTimer);
     btnSimulateSca.disabled = false;
@@ -1094,6 +1121,10 @@
     btnContinue.querySelector('span').textContent = selectedBank ? 'Continue with ' + selectedBank.name : 'Select your bank to continue';
     btnContinue.disabled = !selectedBank;
     showPane('select');
+  };
+  $('btn-back-success').onclick = function () {
+    clearTimers();
+    showPane('methods');
   };
   btnContinue.onclick = startHandoff;
   btnSimulateSca.onclick = simulateSca;
