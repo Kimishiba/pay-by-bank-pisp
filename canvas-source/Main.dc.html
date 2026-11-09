@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hosted checkout</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/cm-com/colors_and_type.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.pm{transition:box-shadow 200ms cubic-bezier(0.22,1,0.36,1),border-color 200ms cubic-bezier(0.22,1,0.36,1)}
+.pm:hover{box-shadow:0 6px 18px rgba(16,30,30,0.08)}
+.pm:focus-visible{outline:2px solid #007FFF;outline-offset:2px}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; padding: 56px 24px; display: flex; align-items: center; justify-content: center; font-family: var(--font-body); color: var(--fg-1); background: radial-gradient(900px 600px at 12% 8%, rgba(102,16,242,0.07), transparent 60%), radial-gradient(800px 600px at 92% 94%, rgba(0,127,255,0.08), transparent 60%), #F7F7F9;">
+
+<main style="width: 100%; max-width: 480px; box-sizing: border-box; background: #FFFFFF; border-radius: 16px; overflow: hidden; padding: 40px; display: flex; flex-direction: column; gap: 28px; box-shadow: 0 2px 4px rgba(16,30,30,0.04), 0 12px 28px rgba(16,30,30,0.07), 0 40px 80px rgba(16,30,30,0.08);">
+<a href="https://amnesia.es" aria-label="Back to Amnesia Ibiza" title="Placeholder: production uses the merchant return/cancel URL" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #344055; text-decoration: none; margin: -12px 0 -12px -4px;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+<span>Back</span>
+</a>
+
+<header style="display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center;">
+<div role="img" aria-label="{{merchant.logoLabel}}" style="width: 64px; height: 64px; border-radius: 12px; overflow: hidden; display: flex; box-shadow: 0 0 0 1px rgba(16,30,30,0.06);">
+<sc-if value="{{isHome}}" hint-placeholder-val="{{ true }}">
+<img src="/_blob/c8d3ff6fefd82a9616a8559251a0c48e" alt="" style="width: 64px; height: 64px; object-fit: cover; display: block;">
+</sc-if>
+<sc-if value="{{isCoffee}}" hint-placeholder-val="{{ false }}">
+<svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#2B1D16"></rect><ellipse cx="32" cy="32" rx="12" ry="17" transform="rotate(35 32 32)" fill="#F3E3CF"></ellipse><path d="M41.5 19 C32 27 36 37 22.5 45.5" fill="none" stroke="#2B1D16" stroke-width="2.5" stroke-linecap="round"></path></svg>
+</sc-if>
+<sc-if value="{{isFurniture}}" hint-placeholder-val="{{ false }}">
+<svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E4EFE6"></rect><rect x="30" y="50" width="4" height="7" fill="#1F5A3D"></rect><polygon points="32,29 50,50 14,50" fill="#1F5A3D"></polygon><polygon points="32,19 46,38 18,38" fill="#2E7D55"></polygon><polygon points="32,10 42,25 22,25" fill="#46A474"></polygon></svg>
+</sc-if>
+<sc-if value="{{isOutdoor}}" hint-placeholder-val="{{ false }}">
+<svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#0D314B"></rect><path d="M14 25 Q23 17 32 25 T50 25" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"></path><path d="M14 35 Q23 27 32 35 T50 35" fill="none" stroke="#04E4F4" stroke-width="3" stroke-linecap="round"></path><path d="M14 45 Q23 37 32 45 T50 45" fill="none" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="3" stroke-linecap="round"></path></svg>
+</sc-if>
+</div>
+<h1 style="margin: 0; font-size: 20px; line-height: 1.3; font-weight: 700; letter-spacing: -0.01em; overflow-wrap: anywhere;">{{merchant.name}}</h1>
+</header>
+
+<section aria-label="Order summary" style="background: #F5F5F6; border-radius: 10px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px;">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+<span style="font-size: 13px; font-weight: 500; color: #5A6372;">Date</span>
+<span style="font-size: 14px; font-weight: 600; color: var(--fg-1); overflow-wrap: anywhere;">7 November 2026, 14:32</span>
+</div>
+<div style="height: 1px; background: #E6E8EB;"></div>
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+<span style="font-size: 13px; font-weight: 500; color: #5A6372;">Order reference</span>
+<span style="font-size: 14px; font-weight: 600; color: var(--fg-1); overflow-wrap: anywhere;">{{merchant.ref}}</span>
+</div>
+<div style="height: 1px; background: #E6E8EB;"></div>
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+<span style="font-size: 13px; font-weight: 500; color: #5A6372;">Amount</span>
+<span style="font-size: 14px; font-weight: 600; color: var(--fg-1); overflow-wrap: anywhere;">{{merchant.amount}}</span>
+</div>
+</section>
+
+<section aria-labelledby="pm-title" style="display: flex; flex-direction: column; gap: 14px;">
+<h2 id="pm-title" style="margin: 0; font-size: 13px; line-height: 1.4; font-weight: 600; letter-spacing: 0.02em; color: #344055;">Choose a payment method</h2>
+<div style="display: flex; gap: 10px;">
+<sc-for list="{{express}}" as="e" hint-placeholder-count="3">
+<button type="button" class="pm" aria-label="{{e.label}}" aria-pressed="{{e.selected}}" onClick="{{e.pick}}" style="flex: 1 1 0; min-width: 0; height: 52px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; padding: 0; background: {{e.bg}}; border: 1.5px solid {{e.border}}; border-radius: 10px; cursor: pointer; box-shadow: {{e.ring}};">
+<img src="{{e.logo}}" alt="" style="width: {{e.size}}px; height: {{e.size}}px; object-fit: contain; filter: {{e.filter}};">
+</button>
+</sc-for>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; color: #5A6372; font-size: 12px; font-weight: 500;">
+<span style="flex-grow: 1; height: 1px; background: #E6E8EB;"></span>
+<span>Or pay with</span>
+<span style="flex-grow: 1; height: 1px; background: #E6E8EB;"></span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px;">
+<sc-for list="{{methods}}" as="m" hint-placeholder-count="4">
+<button type="button" class="pm" aria-pressed="{{m.selected}}" onClick="{{m.pick}}" style="display: flex; align-items: center; gap: 16px; width: 100%; min-height: 64px; box-sizing: border-box; padding: 11px 18px 11px 12px; background: {{m.bg}}; border: 1.5px solid {{m.border}}; border-radius: 10px; cursor: pointer; font-family: inherit; text-align: left; color: var(--fg-1);">
+<span style="width: 72px; height: 44px; box-sizing: border-box; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #FFFFFF; border: 1px solid #ECEDEF; display: flex; align-items: center; justify-content: center; gap: 4px;">
+<sc-if value="{{m.fillLogo}}" hint-placeholder-val="{{ false }}">
+<img src="{{m.logo}}" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+</sc-if>
+<sc-if value="{{m.hasLogo}}" hint-placeholder-val="{{ true }}">
+<img src="{{m.logo}}" alt="" style="width: {{m.logoW}}px; height: {{m.logoW}}px; object-fit: contain;">
+</sc-if>
+<sc-if value="{{m.noLogo}}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5A6372;">Logo</span>
+</sc-if>
+<sc-if value="{{m.logo2}}" hint-placeholder-val="{{ false }}">
+<img src="{{m.logo2}}" alt="" style="width: {{m.logoW}}px; height: {{m.logoW}}px; object-fit: contain;">
+</sc-if>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+<span style="font-size: 15px; font-weight: 600; letter-spacing: -0.005em; overflow-wrap: anywhere;">{{m.name}}</span>
+<sc-if value="{{m.tagline}}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 12px; font-weight: 500; line-height: 1.4; color: #5A6372; overflow-wrap: anywhere;">{{m.tagline}}</span>
+</sc-if>
+</span>
+<sc-if value="{{m.c2p}}" hint-placeholder-val="{{ false }}">
+<svg width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="Click to Pay available" style="flex-shrink: 0;"><rect x="1.5" y="5.5" width="29" height="21" rx="4" fill="none" stroke="#5A6372" stroke-width="1.5"></rect><path d="M8 10h9l6 6-6 6H8z" fill="#101E1E"></path><path d="M12.5 13l3 3-3 3M16.5 13l3 3-3 3" fill="none" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</sc-if>
+</button>
+</sc-for>
+</div>
+</section>
+
+<footer style="display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0 -40px -40px; padding: 20px 40px; background: #2B2F36; color: #E6E8EB; font-size: 15px; font-weight: 500;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2.5"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+<span>Secured by</span>
+<img src="/_blob/1dff062cf3570eb6f7af1af8b565411f" alt="CM.com" style="height: 20px; width: auto;">
+</footer>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#007FFF","options":["#007FFF","#6610F2","#101E1E"]},"merchant":{"editor":"enum","default":"home","options":["home","coffee","furniture","outdoor"]},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { picked: 'ideal' };
+  }
+  renderVals() {
+    const accent = this.props.accent ?? '#007FFF';
+    const tint = /^#[0-9a-fA-F]{6}$/.test(accent) ? accent + '0F' : '#F4F9FF';
+    const b = {
+      ideal: '/_blob/feddb38c1391261bc3d408ed28685d79',
+      visa: '/_blob/37a841665210cb936e24d46c48659d84',
+      mastercard: '/_blob/d63dea3b9b024d206737b65d39c2c67d',
+      paypal: '/_blob/bd26fe2e33d7205af048edc6f95b8040',
+      applepay: '/_blob/3950b139509acd8472916ffdba456bfc',
+      bancontact: '/_blob/6f6aaff309ae9b0a4b6c3032989c5910',
+      klarna: '/_blob/9361a7c88adca5839fa74be8f9ddf7f5'
+    };
+    const defs = [
+      { id: 'ideal', name: 'iDEAL | Wero', logo: b.ideal, logoW: 38 },
+      { id: 'wero', name: 'Pay with Wero', tagline: 'Instant payment from your bank account', logo: '/_blob/68cbf4cea12b9bb794e42fc0400a7ebb', fill: true, logoW: 38 },
+      { id: 'card', name: 'Credit or debit card', logo: b.visa, logo2: b.mastercard, logoW: 32, c2p: true },
+      { id: 'bancontact', name: 'Bancontact', logo: b.bancontact, logoW: 50 },
+      { id: 'klarna', name: 'Klarna', logo: b.klarna, logoW: 56 }
+    ];
+    const expressDefs = [
+      { id: 'applepay', label: 'Apple Pay', logo: b.applepay, size: 52, bg: '#FFFFFF', border: '#DADCE0', filter: 'none' },
+      { id: 'paypal', label: 'PayPal', logo: b.paypal, size: 40, bg: '#FFC439', border: '#FFC439', filter: 'none' },
+      { id: 'googlepay', label: 'Google Pay', logo: '/_blob/3fc0f2c6eae6dc99d8cde8d3dda5d8b2', size: 52, bg: '#FFFFFF', border: '#DADCE0', filter: 'none' }
+    ];
+    const express = expressDefs.map((d) => ({
+      ...d,
+      selected: this.state.picked === d.id,
+      ring: this.state.picked === d.id ? '0 0 0 2px #FFFFFF, 0 0 0 4px ' + accent : 'none',
+      pick: () => this.setState({ picked: d.id })
+    }));
+    const methods = defs.map((d) => {
+      const selected = this.state.picked === d.id;
+      return {
+        ...d,
+        logo2: d.logo2 || '',
+        tagline: d.tagline || '',
+        c2p: !!d.c2p,
+        hasLogo: !!d.logo && !d.fill,
+        fillLogo: !!d.fill,
+        noLogo: !d.logo,
+        selected,
+        bg: selected ? tint : '#FFFFFF',
+        border: selected ? accent : '#E6E8EB',
+        ring: selected ? accent : '#AEB3BB',
+        pick: () => this.setState({ picked: d.id })
+      };
+    });
+    const merchants = {
+      home: { name: 'Amnesia Ibiza', ref: 'TKT-2026-00817', amount: '€ 65,00', logoLabel: 'Amnesia Ibiza logo' },
+      coffee: { name: 'Oosterkade Coffee Roasters', ref: 'ORD-2026-004812', amount: '€ 48,90', logoLabel: 'Oosterkade Coffee Roasters logo' },
+      furniture: { name: 'Lumen & Pine', ref: 'LP-118347', amount: '€ 1.249,00', logoLabel: 'Lumen & Pine logo' },
+      outdoor: { name: 'Fjordline Outdoor', ref: 'FJ-20261106-0931', amount: '€ 215,50', logoLabel: 'Fjordline Outdoor logo' }
+    };
+    const key = merchants[this.props.merchant] ? this.props.merchant : 'home';
+    return {
+      accent,
+      express,
+      methods,
+      merchant: merchants[key],
+      isHome: key === 'home',
+      isCoffee: key === 'coffee',
+      isFurniture: key === 'furniture',
+      isOutdoor: key === 'outdoor'
+    };
+  }
+}
+</script>
+</body>
+</html>
