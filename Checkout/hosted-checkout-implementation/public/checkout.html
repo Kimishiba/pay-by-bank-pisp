@@ -522,6 +522,52 @@
         </div>
       </div>
 
+      <!-- PANE: Wero QR Code & Mobile Approval (EPI European Payments Initiative) -->
+      <div class="pane pane-handoff" id="pane-wero">
+        <button type="button" class="back-to-methods-btn" id="btn-back-wero">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+          <span>Choose another payment method</span>
+        </button>
+
+        <div style="display:flex; align-items:center; gap:14px; width:100%; border-bottom:1px solid #E3E4DE; padding-bottom:14px;">
+          <div style="width:48px; height:48px; border-radius:12px; background:#FFF48D; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <img src="assets/wero.png" alt="Wero" style="width:34px; height:auto;">
+          </div>
+          <div style="min-width:0; flex-grow:1;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
+              <h3 class="pbb-title" style="font-size:18px;">Pay with Wero</h3>
+              <span class="pbb-dnb-badge" style="background:#EBF5FF; border-color:#BFDBFE; color:#1E40AF;">EPI Standard</span>
+            </div>
+            <p class="pbb-sub" style="margin-top:2px;">European instant account-to-account payment</p>
+          </div>
+        </div>
+
+        <div class="radar-status" role="status" aria-live="polite">
+          <span class="dot-blink" style="background:#2563EB;"></span>
+          <span>Waiting for scan in your Wero or bank app...</span>
+        </div>
+
+        <div class="pbb-qr-wrapper" id="wero-qr-box" style="border: 2px solid #20221F;"></div>
+
+        <div style="text-align:center; max-width:320px;">
+          <p style="font-size:13px; font-weight:600; color:#20221F; margin:0 0 4px;">Scan with Wero or your banking app</p>
+          <p style="font-size:12px; color:#797C74; margin:0; line-height:1.4;">Supported by BNP Paribas, BPCE, Crédit Agricole, ING, Rabobank, Deutsche Bank, Sparkassen, and more.</p>
+        </div>
+
+        <!-- Mobile deep link fallback -->
+        <a href="https://wero-wallet.eu/pay/amnesia" target="_blank" rel="noopener noreferrer" id="wero-app-link" style="font-size:13px; font-weight:600; color:#0D314B; text-decoration:underline;">
+          Open Wero app on this device ↗
+        </a>
+
+        <!-- Simulator Button for Instant Sandbox Verification -->
+        <div class="sim-box" id="wero-sim-box">
+          <div style="font-size:11px; font-weight:700; color:#6B7280; text-transform:uppercase;">EPI Sandbox Verification</div>
+          <button type="button" class="sim-btn" id="btn-wero-simulate" style="background:#2563EB;">
+            ⚡ Simulate Wero App Approval
+          </button>
+        </div>
+      </div>
+
       <!-- PANE: Pay by bank, bank selection -->
       <div class="pane" id="pane-pbb-select">
         <button type="button" class="back-to-methods-btn" id="btn-back-to-methods">
@@ -658,7 +704,7 @@
     { id: 'pbb', name: 'Pay by bank', desc: 'Secure payment from your bank', icon: ICON_BANK, iconStyle: 'background:#FFF7ED; border:1px solid #FFEDD5;', nameStyle: 'color:#C2410C;', action: 'pbb' },
     { id: 'klarna', name: 'Klarna', desc: 'Pay now or pay later', iconStyle: 'background:#FFB3C7;', icon: '<img src="assets/klarna.svg" alt="" style="width:30px; height:auto;">' },
     { id: 'ideal', name: 'iDEAL', desc: 'Pay securely with your Dutch bank', iconStyle: 'background:#FFFFFF; border:1px solid #E3E4DE;', icon: '<img src="assets/ideal-wero.svg" alt="iDEAL" style="width:26px; height:auto;">', action: 'pbb' },
-    { id: 'wero', name: 'Wero', desc: 'Pay directly from your bank account', iconStyle: 'background:#FFF48D;', icon: '<img src="assets/wero.png" alt="" style="width:30px; height:auto;">' },
+    { id: 'wero', name: 'Wero', desc: 'Pay directly from your bank account', iconStyle: 'background:#FFF48D;', icon: '<img src="assets/wero.png" alt="" style="width:30px; height:auto;">', action: 'wero' },
     { id: 'sofort', name: 'Sofort', desc: 'Instant online bank transfer', iconStyle: 'background:#FFFFFF; border:1px solid #E3E4DE;', icon: txt('SOFORT', 'background:#FFA8CD; color:#000; font-size:7px; font-weight:800; padding:2px 4px; border-radius:3px;') },
     // Bancontact acceptance mark + combined tagline per the Bancontact brand guidelines.
     // TODO: replace assets/bancontact.svg with the 2026 logo set (old logos must be gone by 31 Dec 2026).
@@ -674,7 +720,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var PANES = {
     methods: $('pane-methods'), card: $('pane-card'), bancontact: $('pane-bancontact'),
-    select: $('pane-pbb-select'), handoff: $('pane-pbb-handoff'), success: $('pane-success')
+    wero: $('pane-wero'), select: $('pane-pbb-select'), handoff: $('pane-pbb-handoff'), success: $('pane-success')
   };
   var footer = $('secured-bar');
 
@@ -779,6 +825,7 @@
     renderMethods();
     if (m.action === 'card') return openCard();
     if (m.action === 'bancontact') return openBancontact();
+    if (m.action === 'wero') return openWero();
     if (m.action === 'pbb') return openPayByBank();
     setStatus(m.name + ' is not connected in this demo yet.');
   }
@@ -959,6 +1006,37 @@
     }, 600);
   });
 
+  /* ---------- Wero flow (EPI European Payments Initiative) ---------- */
+  var weroQrBox = $('wero-qr-box');
+  var btnWeroSimulate = $('btn-wero-simulate');
+
+  window.openWero = openWero;
+  function openWero() {
+    clearTimers();
+    // Render official EPI Wero QR payload standard (EPC QR / Wero tokenized payload)
+    var weroPayload = 'wero://pay?amount=' + encodeURIComponent(CONFIG.order.amount) +
+      '&currency=' + encodeURIComponent(CONFIG.order.currency) +
+      '&recipient=Amnesia%20Ibiza' +
+      '&ref=' + encodeURIComponent(CONFIG.order.reference) +
+      '&token=WERO-EPI-' + Date.now();
+    renderQr(weroQrBox, weroPayload);
+
+    btnWeroSimulate.disabled = false;
+    btnWeroSimulate.textContent = '⚡ Simulate Wero App Approval';
+    showPane('wero');
+  }
+
+  btnWeroSimulate.addEventListener('click', function () {
+    btnWeroSimulate.disabled = true;
+    btnWeroSimulate.textContent = '⚡ Settling via EPI SCT-Inst...';
+    setTimeout(function () {
+      settleSuccess({
+        clearing_reference: 'WERO-EPI-' + Date.now(),
+        rail: 'Wero · European Payments Initiative (SEPA Instant)'
+      });
+    }, 700);
+  });
+
   /* ---------- Pay by bank (existing flow) ---------- */
   var searchInput = $('pbb-search');
   var bankListEl = $('pbb-bank-list');
@@ -1111,6 +1189,10 @@
     if (pollTimer) clearInterval(pollTimer);
     showPane('methods');
   };
+  $('btn-back-wero').onclick = function () {
+    if (pollTimer) clearInterval(pollTimer);
+    showPane('methods');
+  };
   $('btn-back-to-methods').onclick = function () {
     showPane('methods');
   };
@@ -1150,6 +1232,7 @@
   if (deepLink === 'pay-by-bank') { selectedMethod = 'pbb'; renderMethods(); openPayByBank(); }
   else if (deepLink === 'card') { selectedMethod = 'card'; renderMethods(); openCard(); }
   else if (deepLink === 'bancontact') { selectedMethod = 'bancontact'; renderMethods(); openBancontact(); }
+  else if (deepLink === 'wero') { selectedMethod = 'wero'; renderMethods(); openWero(); }
 })();
 </script>
 </body>
