@@ -414,6 +414,11 @@
                 <div class="bank-meta">BIC: RREGNL21</div>
                 <div class="bank-meta">psd2/regiobank</div>
               </div>
+              <div class="bank-option" data-bank="bunq" onclick="selectBank('bunq')">
+                <div class="bank-title">bunq</div>
+                <div class="bank-meta">BIC: BUNQNL2A</div>
+                <div class="bank-meta">public-api.sandbox.bunq.com</div>
+              </div>
               <div class="bank-option" data-bank="revolut" onclick="selectBank('revolut')">
                 <div class="bank-title">Revolut Bank</div>
                 <div class="bank-meta">BIC: REVONL21</div>
@@ -584,6 +589,7 @@ curl -i -X POST 'https://api.sandbox.ing.com/v2/payments/sepa-credit-transfers' 
       snsbank: { name: 'SNS Bank', app: 'SNS Mobiel Bankieren', icon: '🔴', iban: 'NL44SNSB0123456789' },
       asnbank: { name: 'ASN Bank', app: 'ASN Bankieren', icon: '🌱', iban: 'NL92ASNB0123456789' },
       regiobank: { name: 'RegioBank', app: 'RegioBank App', icon: '🏘️', iban: 'NL18RREG0123456789' },
+      bunq: { name: 'bunq', app: 'bunq App', icon: '🌈', iban: 'NL47BUNQ2108022813' },
       volksbank: { name: 'De Volksbank', app: 'SNS / ASN Bankieren', icon: '🏦', iban: 'NL44SNSB0123456789' },
       revolut: { name: 'Revolut Bank', app: 'Revolut App', icon: '⚡', iban: 'LT00REVO1234567890' }
     };

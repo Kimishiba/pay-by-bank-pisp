@@ -1,0 +1,12 @@
+{
+  "api_key": "f8bfc2590bfbe13672668aa22a002a4fb1c441922ac2d81122c71d123d3e9fa8",
+  "client_id": "091fd51c06412f434587465c10e366fa12499927ce355a6b962aa0faef32d7e7",
+  "client_secret": "4364b678d5158c080ab31570c4043f3049d7576f3fc2b4138cf8f268630b3373",
+  "oauth_client_id": 17159,
+  "psp_user_id": 3814146,
+  "sandbox_base_url": "https://public-api.sandbox.bunq.com/v1",
+  "prod_base_url": "https://api.bunq.com/v1",
+  "oauth_auth_url": "https://oauth.sandbox.bunq.com/auth",
+  "oauth_token_url": "https://api.oauth.bunq.com/v1/token",
+  "redirect_uri": "http://localhost:8088/callback"
+}
