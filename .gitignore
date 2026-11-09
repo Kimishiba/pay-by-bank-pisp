@@ -27,3 +27,18 @@ certs/**/*.key
 certs/**/*.csr
 certs/**/*.srl
 certs/**/*.cnf
+
+# Certificates & private keys (all extensions)
+certs/**/*.crt
+certs/**/*.p12
+certs/**/*.cer
+certs/**/*.token
+certs/**/*.key
+certs/**/*.pem
+certs/**/*.pub
+certs/example_client_signing.*
+certs/example_client_tls.*
+
+# Scratch directory & local screenshots
+scratch/
+evidence_*.png

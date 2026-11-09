@@ -1,0 +1,125 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Artboard-lvda.dc.html": {
+      "h": 600,
+      "page": "page-xctgjq",
+      "title": "Artboard 1",
+      "w": 800,
+      "x": 0,
+      "y": 0
+    },
+    "Card.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Checkout — card details",
+      "w": 1440,
+      "x": 4560,
+      "y": 0
+    },
+    "Framer.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Checkout — split layout (copy of Framer page-3)",
+      "w": 1440,
+      "x": 3040,
+      "y": 2788
+    },
+    "Grid.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Checkout — web, logo-only grid",
+      "w": 1440,
+      "x": 3040,
+      "y": 1394
+    },
+    "Main.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Checkout — web",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Scroll.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Checkout — web, many payment methods (scroll)",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "FramerCard.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Checkout — split layout, card details",
+      "w": 1440,
+      "x": 4560,
+      "y": 2788
+    },
+    "Bancontact.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Checkout — Bancontact (QR + card)",
+      "w": 1440,
+      "x": 6080,
+      "y": 2788
+    },
+    "FramerList.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Checkout — split layout, 1-wide method list",
+      "w": 1440,
+      "x": 3040,
+      "y": 4182
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-11-06T12:00:00Z",
+    "v": 1
+  },
+  "designSystems": [
+    {
+      "artifact": "https://claude.ai/artifact/Uw9LBdDjr34VgsQiAEmqBK",
+      "copiedAt": "2026-11-06T12:00:00Z",
+      "namespace": "cm-com",
+      "title": "CM.com Design System",
+      "version": "1793957083-3a88"
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {},
+  "order": [
+    "Artboard-lvda.dc.html",
+    "Main.dc.html",
+    "Scroll.dc.html",
+    "Card.dc.html",
+    "Grid.dc.html",
+    "Framer.dc.html",
+    "FramerList.dc.html",
+    "FramerCard.dc.html",
+    "Bancontact.dc.html"
+  ],
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Page 1"
+    },
+    {
+      "id": "page-xctgjq",
+      "name": "Page 2"
+    }
+  ],
+  "title": "Hosted Checkout"
+}

@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Checkout split layout, one-wide list</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.tile{transition:border-color 150ms ease,box-shadow 150ms ease}
+.tile:hover{border-color:#CFD1CA}
+.tile:focus-visible,.xp:focus-visible{outline:2px solid #20221F;outline-offset:2px}
+.xp{transition:filter 150ms ease}
+.xp:hover{filter:brightness(0.97)}
+.plist{scrollbar-width:thin;scrollbar-color:#8A8D85 transparent}
+.plist::-webkit-scrollbar{width:6px}
+.plist::-webkit-scrollbar-track{background:transparent}
+.plist::-webkit-scrollbar-thumb{background:#8A8D85;border-radius:3px}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; padding: 48px 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; background: #F5F5EF; font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif; color: #20221F;">
+
+<main style="width: 100%; max-width: 1000px; min-height: 740px; box-sizing: border-box; display: flex; flex-direction: row; flex-wrap: wrap; background: #FFFFFF; border-radius: 20px; overflow: hidden; box-shadow: 0 2px 6px rgba(25,32,16,0.03), 0 20px 70px -16px rgba(25,32,16,0.16);">
+
+<section style="flex: 1 1 360px; min-width: 0; box-sizing: border-box; padding: 40px 32px 32px; display: flex; flex-direction: column; gap: 28px; background: #F4F4F4;">
+<a href="https://amnesia.es" aria-label="Back to Amnesia Ibiza" title="Placeholder: production uses the merchant return/cancel URL" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; letter-spacing: -0.02em; color: #666666; margin: -8px 0 -12px;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+<span>Back</span>
+</a>
+<div style="display: flex; flex-direction: row; align-items: center; gap: 20px;">
+<div role="img" aria-label="Amnesia Ibiza logo" style="width: 88px; height: 88px; flex-shrink: 0; border-radius: 16px; overflow: hidden; display: flex;">
+<img src="/_blob/c8d3ff6fefd82a9616a8559251a0c48e" alt="" style="width: 88px; height: 88px; object-fit: cover; display: block;">
+</div>
+<div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+<h1 style="margin: 0; font-size: 26px; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em;">Amnesia Ibiza</h1>
+<span style="font-size: 13px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #666666;">amnesia.es</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px;">
+<h2 style="margin: 0; font-size: 24px; line-height: 1.4; font-weight: 600; letter-spacing: -0.02em;">Complete your payment</h2>
+<div style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #666666;">
+<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px;"><span>Date</span><span>7 November 2026, 14:32</span></div>
+<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px;"><span>Order reference</span><span>AMN-2026-08421</span></div>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; flex-direction: row; align-items: baseline; gap: 10px;">
+<span style="font-size: 40px; line-height: 1.4; font-weight: 600; letter-spacing: -0.04em;">€120.00</span>
+<span style="font-size: 13px; font-weight: 500; letter-spacing: -0.02em; color: #666666;">EUR</span>
+</div>
+<span style="font-size: 13px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #666666;">2 × General admission · All fees included</span>
+</div>
+</section>
+
+<section style="flex: 1 1 480px; min-width: 0; box-sizing: border-box; border-left: 1px solid #ECEDE7; display: flex; flex-direction: column;">
+<div style="flex-grow: 1; box-sizing: border-box; padding: 40px 32px 28px; display: flex; flex-direction: column; gap: 10px;">
+<span style="font-size: 13px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #797C74;">Express checkout</span>
+<div style="display: flex; flex-direction: row; gap: 10px;">
+<button type="button" class="xp" aria-label="Pay with Apple Pay" title="Placeholder: replace with Apple's own Apple Pay button (black)" style="flex: 1 1 0; min-width: 0; height: 48px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; padding: 0; background: #191B18; border: 0; border-radius: 8px; cursor: pointer;">
+<svg height="42" viewBox="0 0 109 70" aria-hidden="true" style="display: block;"><g fill="#FFFFFF"><path d="M30.36,23.61a6.09,6.09,0,0,0,1.39-4.3,6,6,0,0,0-4,2.05,5.63,5.63,0,0,0-1.42,4.13,5,5,0,0,0,4-1.88"></path><path d="M31.73,25.79C29.52,25.66,27.64,27,26.59,27s-2.67-1.18-4.42-1.15a6.53,6.53,0,0,0-5.54,3.36c-2.37,4.09-.62,10.16,1.69,13.49,1.12,1.65,2.47,3.46,4.25,3.4s2.34-1.09,4.38-1.09,2.64,1.09,4.42,1.05,3-1.65,4.12-3.3A14.48,14.48,0,0,0,37.33,39a6,6,0,0,1-3.59-5.44,6.1,6.1,0,0,1,2.9-5.11,6.33,6.33,0,0,0-4.91-2.67"></path><path d="M51,21.19a7.76,7.76,0,0,1,8.14,8.13,7.85,7.85,0,0,1-8.26,8.16H45.52v8.45H41.68V21.19ZM45.52,34.26h4.41c3.34,0,5.24-1.8,5.24-4.92s-1.9-4.91-5.23-4.91H45.52Z"></path><path d="M60.1,40.8c0-3.15,2.42-5.09,6.7-5.33l4.94-.29V33.79c0-2-1.35-3.2-3.62-3.2s-3.48,1-3.8,2.64h-3.5c.21-3.26,3-5.66,7.44-5.66s7.17,2.31,7.17,5.93V45.93H71.88V43h-.09a6.43,6.43,0,0,1-5.69,3.28C62.57,46.24,60.1,44,60.1,40.8Zm11.64-1.62V37.75L67.3,38c-2.21.15-3.46,1.13-3.46,2.67s1.3,2.61,3.29,2.61A4.32,4.32,0,0,0,71.74,39.18Z"></path><path d="M78.78,52.56v-3a6.68,6.68,0,0,0,1.2.07c1.71,0,2.64-.72,3.2-2.57,0,0,.33-1.1.33-1.11L77,27.9h4l4.57,14.67h.06L90.19,27.9H94.1l-6.75,19c-1.54,4.37-3.33,5.78-7.06,5.78A12.26,12.26,0,0,1,78.78,52.56Z"></path></g></svg>
+</button>
+<button type="button" class="xp" aria-label="PayPal" style="flex: 1 1 0; min-width: 0; height: 48px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; padding: 0; background: #FFC439; border: 0; border-radius: 8px; cursor: pointer;">
+<img src="/_blob/bd26fe2e33d7205af048edc6f95b8040" alt="" style="width: 36px; height: 36px; object-fit: contain;">
+</button>
+<button type="button" class="xp" aria-label="Google Pay" title="Placeholder: replace with Google's own Google Pay button" style="flex: 1 1 0; min-width: 0; height: 48px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; padding: 0; background: #FFFFFF; border: 1px solid #E3E4DE; border-radius: 8px; cursor: pointer;">
+<svg height="42" viewBox="2 1.9 124.1 66.2" aria-hidden="true" style="display: block;"><g id="G_Pay_Lockup_1_">
+<g id="Pay_Typeface_3_">
+<path id="Letter_p_3_" d="M61.2,37.2v10H58V22.6h8.4c2.1,0,3.9,0.7,5.4,2.1c1.5,1.4,2.3,3.2,2.3,5.2    c0,2.1-0.8,3.8-2.3,5.2c-1.5,1.4-3.3,2.1-5.4,2.1L61.2,37.2L61.2,37.2z M61.2,25.6v8.6h5.3c1.3,0,2.3-0.4,3.1-1.3    c0.8-0.8,1.3-1.9,1.3-3c0-1.1-0.4-2.1-1.3-3c-0.8-0.9-1.9-1.3-3.1-1.3L61.2,25.6L61.2,25.6z" fill="#3C4043"></path>
+<path id="Letter_a_3_" d="M82.4,29.8c2.3,0,4.2,0.6,5.5,1.9c1.4,1.3,2,3,2,5.1v10.4h-3v-2.3h-0.1    c-1.3,1.9-3.1,2.9-5.2,2.9c-1.9,0-3.4-0.5-4.7-1.7C75.6,45,75,43.6,75,42c0-1.7,0.7-3.1,2-4.2c1.3-1,3.1-1.6,5.3-1.6    c1.9,0,3.4,0.3,4.6,1v-0.7c0-1.1-0.4-2-1.3-2.8c-0.9-0.8-1.9-1.2-3.1-1.2c-1.8,0-3.2,0.7-4.2,2.2l-2.8-1.7    C77.1,30.9,79.4,29.8,82.4,29.8z M78.3,42c0,0.8,0.3,1.5,1.1,2.1c0.7,0.5,1.5,0.8,2.5,0.8c1.3,0,2.5-0.5,3.6-1.5s1.6-2.1,1.6-3.5    c-1-0.8-2.4-1.2-4.1-1.2c-1.3,0-2.4,0.3-3.2,0.9C78.7,40.3,78.3,41.1,78.3,42z" fill="#3C4043"></path>
+<path id="Letter_y_3_" d="M107.2,30.3L96.6,54.6h-3.3l3.9-8.5l-7-15.8h3.4l5,12.1h0.1l4.9-12.1H107.2z" fill="#3C4043"></path>
+</g>
+<g id="G_Mark_1_">
+<path id="Blue_500" d="M48.6,35.2c0-1-0.1-2-0.3-3H35v5.4l7.6,0c-0.3,1.8-1.3,3.4-2.8,4.4v3.5h4.6    C47,43.1,48.6,39.5,48.6,35.2z" fill="#4285F4"></path>
+<path id="Green_500_1_" d="M39.8,42.1c-1.3,0.9-2.9,1.4-4.8,1.4c-3.7,0-6.8-2.5-7.9-5.8h-4.7v3.6    C24.7,45.9,29.5,49,35,49c3.8,0,7-1.3,9.4-3.4L39.8,42.1z" fill="#34A853"></path>
+<path id="Yellow_500_1_" d="M26.6,34.9c0-0.9,0.2-1.8,0.4-2.7v-3.6h-4.7c-1,1.9-1.5,4.1-1.5,6.3    c0,2.3,0.5,4.4,1.5,6.3l4.7-3.6C26.8,36.7,26.6,35.8,26.6,34.9z" fill="#FABB05"></path>
+<path id="Red_500" d="M35,26.4c2.1,0,4,0.7,5.4,2.1l4-4c-2.5-2.3-5.6-3.7-9.5-3.7c-5.5,0-10.3,3.2-12.6,7.8l4.7,3.6    C28.2,28.8,31.3,26.4,35,26.4z" fill="#E94235"></path>
+</g>
+</g>
+</svg>
+</button>
+</div>
+<div style="display: flex; align-items: center; gap: 14px; margin: 6px 0 4px; color: #797C74; font-size: 12px; font-weight: 500; letter-spacing: -0.02em;">
+<span style="flex-grow: 1; height: 1px; background: #ECEDE7;"></span>
+<span>or choose a payment method</span>
+<span style="flex-grow: 1; height: 1px; background: #ECEDE7;"></span>
+</div>
+<span style="align-self: flex-end; font-size: 13px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #797C74;">{{count}} payment methods available</span>
+<div class="plist" role="group" aria-label="Payment methods, scrollable list" tabindex="0" style="max-height: 360px; overflow-y: auto; padding: 0 2px 0 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; align-content: start;">
+<sc-for list="{{methods}}" as="m" hint-placeholder-count="6">
+<button type="button" class="tile" aria-pressed="{{m.selected}}" onClick="{{m.pick}}" style="min-width: 0; box-sizing: border-box; display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 12px; background: #FFFFFF; border: 1px solid {{m.border}}; border-radius: 10px; cursor: pointer; font-family: inherit; text-align: left; color: #20221F;">
+<span style="width: 36px; height: 36px; box-sizing: border-box; flex-shrink: 0; border-radius: 7px; overflow: hidden; background: {{m.tileBg}}; border: {{m.tileBorder}}; display: flex; align-items: center; justify-content: center;">
+<sc-if value="{{m.isCard}}" hint-placeholder-val="{{ false }}">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3A3C37" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"></rect><path d="M3 10h18M7 14.5h3"></path></svg>
+</sc-if>
+<sc-if value="{{m.isBank}}" hint-placeholder-val="{{ false }}">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3A3C37" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5L12 4l9 5.5M5 10v7M9.5 10v7M14.5 10v7M19 10v7M3.5 20h17"></path></svg>
+</sc-if>
+<sc-if value="{{m.isFill}}" hint-placeholder-val="{{ false }}">
+<img src="{{m.img}}" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+</sc-if>
+<sc-if value="{{m.isLogo}}" hint-placeholder-val="{{ true }}">
+<img src="{{m.img}}" alt="" style="width: {{m.imgW}}px; height: {{m.imgW}}px; object-fit: contain;">
+</sc-if>
+<sc-if value="{{m.isPh}}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 8px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #797C74;">Logo</span>
+</sc-if>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+<span style="font-size: 14px; line-height: 1.4; font-weight: 600; letter-spacing: -0.02em;">{{m.name}}</span>
+<span style="font-size: 12px; line-height: 1.3; font-weight: 500; letter-spacing: -0.02em; color: #797C74; overflow-wrap: anywhere;">{{m.desc}}</span>
+</span>
+</button>
+</sc-for>
+</div>
+<div role="status" style="box-sizing: border-box; padding: 10px 16px; border-radius: 10px; background: #F5F5EF; text-align: center; font-size: 13px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #797C74;">Scroll inside the list to see all {{count}} payment methods</div>
+</div>
+<footer style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 18px 32px; background: #0D314B; color: #FFFFFF; font-size: 14px; font-weight: 500; letter-spacing: -0.01em;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2.5"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+<span>Secured by</span>
+<img src="/_blob/1dff062cf3570eb6f7af1af8b565411f" alt="CM.com" style="height: 18px; width: auto;">
+</footer>
+</section>
+
+</main>
+
+<span style="font-size: 12px; font-weight: 500; letter-spacing: -0.02em; color: #797C74;">Design preview · No payment will be taken</span>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { picked: 'card' };
+  }
+  renderVals() {
+    const border = '1px solid #E3E4DE';
+    const defs = [
+      { id: 'card', name: 'Credit or debit card', desc: 'Visa, Mastercard, American Express', kind: 'card' },
+      { id: 'bank', name: 'Pay by bank', desc: 'Secure payment from your bank', kind: 'bank' },
+      { id: 'klarna', name: 'Klarna', desc: 'Pay now or pay later', kind: 'logo', img: '/_blob/9361a7c88adca5839fa74be8f9ddf7f5', imgW: 30, tileBg: '#FFB3C7' },
+      { id: 'ideal', name: 'iDEAL', desc: 'Pay securely with your Dutch bank', kind: 'fill', img: '/_blob/feddb38c1391261bc3d408ed28685d79' },
+      { id: 'wero', name: 'Wero', desc: 'Pay directly from your bank account', kind: 'logo', img: '/_blob/68cbf4cea12b9bb794e42fc0400a7ebb', imgW: 36, tileBg: '#FFF48D' },
+      { id: 'sofort', name: 'Sofort', desc: 'Instant online bank transfer', kind: 'logo', img: '/_blob/a62cda4c7a65b807729a681f3b17607f', imgW: 30, tileBg: '#FFFFFF', tileBorder: border },
+      { id: 'bancontact', name: 'Bancontact', desc: 'Pay with your Bancontact Pay app, your banking app supporting Bancontact payments or Bancontact Card.', kind: 'logo', img: '/_blob/6f6aaff309ae9b0a4b6c3032989c5910', imgW: 32, tileBg: '#FFFFFF', tileBorder: border },
+      { id: 'riverty', name: 'Riverty', desc: 'Buy now, pay later', kind: 'logo', img: '/_blob/bf0014c959f13e2e8db0b8626121b3d7', imgW: 32, tileBg: '#FFFFFF', tileBorder: border },
+      { id: 'billink', name: 'Billink', desc: 'Receive your order, pay later', kind: 'ph' },
+      { id: 'eps', name: 'EPS', desc: 'Pay with your Austrian bank', kind: 'ph' },
+      { id: 'p24', name: 'Przelewy24', desc: 'Online payments in Poland', kind: 'logo', img: '/_blob/3c21ec1b8175ae3e8a575a49e74737d7', imgW: 34, tileBg: '#FFFFFF', tileBorder: border },
+      { id: 'multibanco', name: 'Multibanco', desc: 'Pay using a payment reference', kind: 'ph' },
+      { id: 'paysafecard', name: 'Paysafecard', desc: 'Pay with a prepaid code', kind: 'ph' }
+    ];
+    const methods = defs.map((d) => {
+      const selected = this.state.picked === d.id;
+      return {
+        ...d,
+        isCard: d.kind === 'card',
+        isBank: d.kind === 'bank',
+        isFill: d.kind === 'fill',
+        isLogo: d.kind === 'logo',
+        isPh: d.kind === 'ph',
+        img: d.img || '',
+        imgW: d.imgW || 28,
+        tileBg: d.tileBg || '#F5F6F1',
+        tileBorder: d.tileBorder || '0',
+        selected,
+        border: selected ? '#20221F' : '#E3E4DE',
+        pick: () => this.setState({ picked: d.id })
+      };
+    });
+    return { methods, count: defs.length };
+  }
+}
+</script>
+</body>
+</html>

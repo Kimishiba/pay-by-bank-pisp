@@ -1,0 +1,545 @@
+/* =============================================================
+   CM.com Design System — colors_and_type.css
+   Source of truth: CM.com Brand Book v2.3 (March 2025)
+   ============================================================= */
+
+/* ---------- Fonts ----------
+   Montserrat is the only font in the brand (Brand Book v2.3 May 2026).
+   Files live in /fonts at the project root. Full family — Thin → Black,
+   with matching italics for every weight.
+*/
+@font-face { font-family: "Montserrat"; src: url("fonts/Montserrat-Thin.ttf") format("truetype"); font-weight: 100; font-style: normal; font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("fonts/Montserrat-ThinItalic.ttf") format("truetype"); font-weight: 100; font-style: italic; font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("fonts/Montserrat-ExtraLight.ttf") format("truetype"); font-weight: 200; font-style: normal; font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("fonts/Montserrat-ExtraLightItalic.ttf") format("truetype"); font-weight: 200; font-style: italic; font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("fonts/Montserrat-Light.ttf") format("truetype"); font-weight: 300; font-style: normal; font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("fonts/Montserrat-LightItalic.ttf") format("truetype"); font-weight: 300; font-style: italic; font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("fonts/Montserrat-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("fonts/Montserrat-Italic.ttf") format("truetype"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("fonts/Montserrat-Medium.ttf") format("truetype"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("fonts/Montserrat-MediumItalic.ttf") format("truetype"); font-weight: 500; font-style: italic; font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("fonts/Montserrat-SemiBold.ttf") format("truetype"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("fonts/Montserrat-SemiBoldItalic.ttf") format("truetype"); font-weight: 600; font-style: italic; font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("fonts/Montserrat-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("fonts/Montserrat-BoldItalic.ttf") format("truetype"); font-weight: 700; font-style: italic; font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("fonts/Montserrat-ExtraBold.ttf") format("truetype"); font-weight: 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("fonts/Montserrat-ExtraBoldItalic.ttf") format("truetype"); font-weight: 800; font-style: italic; font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("fonts/Montserrat-Black.ttf") format("truetype"); font-weight: 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("fonts/Montserrat-BlackItalic.ttf") format("truetype"); font-weight: 900; font-style: italic; font-display: swap; }
+
+/* Body and titles are both Montserrat per Brand Book v2.3 (May 2026). */
+
+/* Noto Sans Arabic — self-hosted weights for right-to-left script */
+@font-face { font-family: "Noto Sans Arabic"; src: url("fonts/NotoSansArabic-Thin.ttf") format("truetype"); font-weight: 100; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans Arabic"; src: url("fonts/NotoSansArabic-ExtraLight.ttf") format("truetype"); font-weight: 200; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans Arabic"; src: url("fonts/NotoSansArabic-Light.ttf") format("truetype"); font-weight: 300; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans Arabic"; src: url("fonts/NotoSansArabic-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans Arabic"; src: url("fonts/NotoSansArabic-Medium.ttf") format("truetype"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans Arabic"; src: url("fonts/NotoSansArabic-SemiBold.ttf") format("truetype"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans Arabic"; src: url("fonts/NotoSansArabic-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans Arabic"; src: url("fonts/NotoSansArabic-ExtraBold.ttf") format("truetype"); font-weight: 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans Arabic"; src: url("fonts/NotoSansArabic-Black.ttf") format("truetype"); font-weight: 900; font-style: normal; font-display: swap; }
+
+/* Noto Sans Simplified Chinese — self-hosted weights */
+@font-face { font-family: "Noto Sans SC"; src: url("fonts/NotoSansSC-Thin.ttf") format("truetype"); font-weight: 100; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans SC"; src: url("fonts/NotoSansSC-ExtraLight.ttf") format("truetype"); font-weight: 200; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans SC"; src: url("fonts/NotoSansSC-Light.ttf") format("truetype"); font-weight: 300; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans SC"; src: url("fonts/NotoSansSC-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans SC"; src: url("fonts/NotoSansSC-Medium.ttf") format("truetype"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans SC"; src: url("fonts/NotoSansSC-SemiBold.ttf") format("truetype"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans SC"; src: url("fonts/NotoSansSC-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans SC"; src: url("fonts/NotoSansSC-ExtraBold.ttf") format("truetype"); font-weight: 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans SC"; src: url("fonts/NotoSansSC-Black.ttf") format("truetype"); font-weight: 900; font-style: normal; font-display: swap; }
+
+/* Noto Sans Japanese — self-hosted weights */
+@font-face { font-family: "Noto Sans JP"; src: url("fonts/NotoSansJP-Thin.ttf") format("truetype"); font-weight: 100; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans JP"; src: url("fonts/NotoSansJP-ExtraLight.ttf") format("truetype"); font-weight: 200; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans JP"; src: url("fonts/NotoSansJP-Light.ttf") format("truetype"); font-weight: 300; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans JP"; src: url("fonts/NotoSansJP-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans JP"; src: url("fonts/NotoSansJP-Medium.ttf") format("truetype"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans JP"; src: url("fonts/NotoSansJP-SemiBold.ttf") format("truetype"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans JP"; src: url("fonts/NotoSansJP-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans JP"; src: url("fonts/NotoSansJP-ExtraBold.ttf") format("truetype"); font-weight: 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans JP"; src: url("fonts/NotoSansJP-Black.ttf") format("truetype"); font-weight: 900; font-style: normal; font-display: swap; }
+
+/* Noto Sans Traditional Chinese — self-hosted weights */
+@font-face { font-family: "Noto Sans TC"; src: url("fonts/NotoSansTC-Thin.ttf") format("truetype"); font-weight: 100; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans TC"; src: url("fonts/NotoSansTC-ExtraLight.ttf") format("truetype"); font-weight: 200; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans TC"; src: url("fonts/NotoSansTC-Light.ttf") format("truetype"); font-weight: 300; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans TC"; src: url("fonts/NotoSansTC-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans TC"; src: url("fonts/NotoSansTC-Medium.ttf") format("truetype"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans TC"; src: url("fonts/NotoSansTC-SemiBold.ttf") format("truetype"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans TC"; src: url("fonts/NotoSansTC-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans TC"; src: url("fonts/NotoSansTC-ExtraBold.ttf") format("truetype"); font-weight: 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans TC"; src: url("fonts/NotoSansTC-Black.ttf") format("truetype"); font-weight: 900; font-style: normal; font-display: swap; }
+
+:root {
+  /* =========== COLORS ========== */
+
+  /* Brand core (page 13 of brand book) */
+  --purple-100: #6610F2;   /* primary */
+  --blue-100:   #007FFF;   /* trust */
+  --cyan-100:   #04E4F4;   /* highlight only */
+  --black-140:  #101E1E;   /* softened text black */
+  --orange-100: #FFA400;   /* standard CTA */
+
+  /* Blacks (neutrals) */
+  --black-140s: #101E1E;
+  --black-120:  #212E39;
+  --black-100:  #344055;   /* icon default fill */
+  --black-70:   #707988;
+  --black-40:   #AEB3BB;
+  --black-5:    #F5F5F6;
+  --black-0:    #FFFFFF;
+
+  /* Blues */
+  --blue-180:   #0D314B;
+  --blue-130:   #0562BB;
+  --blue-120:   #036BD2;
+  --blue-110:   #0074E8;
+  --blue-90:    #198BFF;
+  --blue-80:    #3399FF;
+
+  /* Purples */
+  --purple-180: #211B48;
+  --purple-130: #4C14B1;
+  --purple-120: #5412C7;
+  --purple-110: #5D11DC;
+  --purple-80:  #8540F5;
+  --purple-60:  #A370F7;
+
+  /* Cyans */
+  --cyan-110:   #05CFDE;
+  --cyan-90:    #1DE6F5;
+  --cyan-80:    #36E9F6;
+  --cyan-60:    #68EFF8;
+
+  /* Yellows */
+  --yellow-100: #FDCA40;
+  --yellow-90:  #FDCF53;
+  --yellow-80:  #FDD566;
+
+  /* Oranges */
+  --orange-110: #E79603;
+
+  /* =========== SEMANTIC ========== */
+  --fg-1:       var(--black-140);   /* primary text */
+  --fg-2:       var(--black-100);   /* secondary text */
+  --fg-3:       var(--black-70);    /* muted text */
+  --fg-on-dark: var(--black-0);
+  --bg-1:       var(--black-0);     /* page bg */
+  --bg-2:       var(--black-5);     /* subtle surface */
+  --bg-dark:    var(--purple-180);
+  --border-1:   var(--black-40);
+  --border-2:   var(--black-5);
+
+  --link:       var(--blue-100);
+  --link-hover: var(--blue-110);
+
+  --success:    #2DB67C;
+  --warning:    var(--orange-100);
+  --danger:     #E5484D;
+  --info:       var(--blue-100);
+
+  /* =========== TYPE ========== */
+  /* Titles AND body are Montserrat (Brand Book v2.3). */
+  --font-display: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  --font-body:    "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  --font-noto:    "Noto Sans", "Noto Sans Arabic", "Noto Sans TC", "Noto Sans JP", sans-serif;
+  --font-mono:    ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Size scale (rem, body 16px) */
+  --fs-display:  clamp(3rem, 6vw, 5.4rem); /* @kind font */
+  --fs-h1:       3.25rem;                    /* 52pt */
+  --fs-h2:       2.5rem;                     /* 40pt */
+  --fs-h3:       1.875rem;                   /* 30pt */
+  --fs-h4:       1.375rem;                   /* 22pt */
+  --fs-lead:     1.25rem;                    /* 20pt */
+  --fs-body:     1rem;                       /* 16px */
+  --fs-small:    0.875rem;                   /* 14px */
+  --fs-xs:       0.75rem;                    /* 12px */
+  --fs-eyebrow:  0.8125rem;                  /* 13px uppercase */
+
+  /* Line heights — airy by brand direction */
+  --lh-display:  1.05;  /* @kind font */
+  --lh-heading:  1.15;  /* @kind font */
+  --lh-body:     1.6;   /* @kind font */
+
+  /* Tracking */
+  --tracking-display: -0.015em;  /* Brand book: kern -15 for bold */
+  --tracking-eyebrow: 0.08em;
+
+  /* =========== SPACING ========== */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --space-10: 128px;
+
+  /* =========== RADII ========== */
+  --r-xs: 4px;
+  --r-sm: 8px;
+  --r-md: 16px;
+  --r-lg: 24px;
+  --r-xl: 32px;
+  --r-pill: 9999px;
+
+  /* =========== SHADOWS ========== */
+  --shadow-xs: 0 1px 2px rgba(16, 30, 30, 0.04);
+  --shadow-sm: 0 1px 2px rgba(16, 30, 30, 0.06);
+  --shadow-md: 0 1px 2px rgba(16, 30, 30, 0.04), 0 4px 12px rgba(16, 30, 30, 0.06), 0 12px 32px rgba(16, 30, 30, 0.05);
+  --shadow-lg: 0 24px 56px rgba(102, 16, 242, 0.18);
+  --shadow-glow-purple: 0 12px 32px rgba(102, 16, 242, 0.32);
+  --shadow-glow-blue:   0 12px 32px rgba(0, 127, 255, 0.32);
+  --shadow-glow-orange: 0 12px 32px rgba(255, 164, 0, 0.32);
+
+  /* =========== GLASS ========== */
+  /* For use on dark / brand-gradient backgrounds. Combine background + border + backdrop-filter. */
+  --glass-bg:           rgba(255, 255, 255, 0.05);
+  --glass-border:       rgba(255, 255, 255, 0.10);
+  --glass-bg-strong:    rgba(255, 255, 255, 0.08);
+  --glass-border-strong: rgba(255, 255, 255, 0.18);
+  --glass-blur:         17px;  /* Brand Book "Blurred Variant" matches morse blur */
+
+  /* =========== GRADIENTS ========== */
+  /* Brand book color balance: 60% purple + 40% blue/cyan, ~30° */
+  --gradient-brand:        linear-gradient(60deg, var(--purple-100) 0%, var(--blue-100) 100%);
+  --gradient-brand-hero:   linear-gradient(60deg, var(--purple-130) 0%, var(--purple-100) 35%, var(--blue-100) 70%, var(--cyan-100) 105%);
+  --gradient-primary-btn:  linear-gradient(60deg, var(--blue-110) 0%, var(--purple-110) 100%);
+  --gradient-primary-btn-hover: linear-gradient(60deg, var(--blue-120) 0%, var(--purple-120) 100%);
+  --gradient-cta:          linear-gradient(60deg, var(--yellow-100) 0%, var(--orange-100) 100%);
+  --gradient-cta-hover:    linear-gradient(60deg, var(--orange-100) 0%, var(--orange-110) 100%);
+  --gradient-cyan-blue:    linear-gradient(60deg, var(--cyan-100) 0%, var(--blue-100) 100%);
+  --gradient-purple-flat:  linear-gradient(60deg, var(--purple-100) 0%, var(--purple-130) 100%);
+
+  /* =========== MOTION ========== */
+  --ease-out-soft:  cubic-bezier(0.22, 1, 0.36, 1);  /* @kind other */
+  --ease-in-out:    cubic-bezier(0.4, 0, 0.2, 1);    /* @kind other */
+  --dur-fast:       120ms;  /* @kind other */
+  --dur-base:       200ms;  /* @kind other */
+  --dur-slow:       380ms;  /* @kind other */
+}
+
+/* =============================================================
+   SEMANTIC TEXT STYLES
+   ============================================================= */
+html {
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--fg-1);
+  background: var(--bg-1);
+  -webkit-font-smoothing: antialiased;
+}
+
+body { margin: 0; }
+
+h1, .h1, h2, .h2, h3, .h3, h4, .h4 {
+  font-family: var(--font-display);
+  color: var(--fg-1);
+  margin: 0 0 0.5em;
+  letter-spacing: var(--tracking-display);
+  line-height: var(--lh-heading);
+  text-wrap: balance;
+}
+
+.display, .display-1 {
+  font-family: var(--font-display);
+  font-weight: 900; /* Montserrat Black — Brand Book titles */
+  font-size: var(--fs-display);
+  line-height: var(--lh-display);
+  letter-spacing: var(--tracking-display);
+  color: var(--fg-1);
+  text-wrap: balance;
+}
+
+h1, .h1 { font-size: var(--fs-h1); font-weight: 900; }  /* Montserrat Black */
+h2, .h2 { font-size: var(--fs-h2); font-weight: 900; }  /* Montserrat Black */
+h3, .h3 { font-size: var(--fs-h3); font-weight: 700; }  /* Montserrat Bold */
+h4, .h4 { font-size: var(--fs-h4); font-weight: 600; }  /* Montserrat SemiBold */
+
+.subtitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-lead);
+  line-height: var(--lh-heading);
+  letter-spacing: 0;
+  color: var(--fg-2);
+}
+
+.subtitle-light {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: var(--fs-lead);
+  letter-spacing: 0;
+  color: var(--fg-2);
+}
+
+.eyebrow {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-eyebrow);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--cyan-110);
+}
+
+.lead {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--fs-lead);
+  line-height: var(--lh-body);
+  color: var(--fg-2);
+  text-wrap: pretty;
+}
+
+p, .body {
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--fg-1);
+  margin: 0 0 1em;
+  text-wrap: pretty;
+}
+
+.small  { font-size: var(--fs-small); line-height: 1.5; }
+.xs     { font-size: var(--fs-xs); line-height: 1.4; }
+
+.quote {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 700;
+  font-size: var(--fs-h4);
+  line-height: 1.4;
+  color: var(--purple-100);
+}
+
+a {
+  color: var(--link);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  transition: color var(--dur-fast) var(--ease-out-soft);
+}
+a:hover { color: var(--link-hover); }
+
+code, .mono {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: var(--black-5);
+  padding: 0.12em 0.4em;
+  border-radius: var(--r-xs);
+}
+
+/* =============================================================
+   BUTTONS — pill, brand book section "Primary/Secondary/Tertiary"
+   ============================================================= */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 14px 26px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+  letter-spacing: 0;
+  border-radius: var(--r-pill);
+  border: 2px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background var(--dur-base) var(--ease-out-soft),
+    box-shadow var(--dur-base) var(--ease-out-soft),
+    transform var(--dur-fast) var(--ease-out-soft),
+    color var(--dur-base) var(--ease-out-soft),
+    border-color var(--dur-base) var(--ease-out-soft);
+  user-select: none;
+}
+.btn:focus-visible {
+  outline: 2px solid var(--blue-100);
+  outline-offset: 2px;
+}
+.btn:active { transform: translateY(0); box-shadow: none; }
+
+/* Primary — Blue→Purple gradient */
+.btn-primary {
+  background: var(--gradient-primary-btn);
+  color: var(--black-0);
+}
+.btn-primary:hover {
+  background: var(--gradient-primary-btn-hover);
+  box-shadow: var(--shadow-glow-purple);
+}
+.btn-primary-outline {
+  background: transparent;
+  color: var(--purple-110);
+  position: relative;
+  border: 2px solid transparent;
+  background-image: linear-gradient(white, white), var(--gradient-primary-btn);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+.btn-primary-outline:hover { box-shadow: var(--shadow-glow-purple); }
+
+/* CTA — Orange (the special standout per brand book) */
+.btn-cta {
+  background: var(--gradient-cta);
+  color: var(--black-140);
+}
+.btn-cta:hover {
+  background: var(--gradient-cta-hover);
+  color: var(--black-140);
+  box-shadow: var(--shadow-glow-orange);
+}
+
+/* Secondary — Cyan→Blue */
+.btn-secondary {
+  background: var(--gradient-cyan-blue);
+  color: var(--black-140);
+}
+.btn-secondary:hover { box-shadow: var(--shadow-glow-blue); }
+.btn-secondary-outline {
+  background: transparent;
+  color: var(--blue-100);
+  border-color: var(--cyan-100);
+}
+.btn-secondary-outline:hover {
+  color: var(--blue-110);
+  border-color: var(--blue-100);
+  box-shadow: var(--shadow-glow-blue);
+}
+
+/* Tertiary — flat solids */
+.btn-tertiary-blue {
+  background: var(--blue-100);
+  color: var(--black-0);
+}
+.btn-tertiary-blue:hover { background: var(--blue-110); box-shadow: var(--shadow-glow-blue); }
+.btn-tertiary-purple {
+  background: var(--purple-100);
+  color: var(--black-0);
+}
+.btn-tertiary-purple:hover { background: var(--purple-110); box-shadow: var(--shadow-glow-purple); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--purple-100);
+  border-color: transparent;
+}
+.btn-ghost:hover { color: var(--purple-110); background: rgba(102, 16, 242, 0.06); }
+
+.btn-sm { padding: 10px 18px; font-size: 0.875rem; }
+.btn-lg { padding: 18px 32px; font-size: 1.125rem; }
+
+.btn[disabled],
+.btn:disabled { opacity: 0.4; pointer-events: none; box-shadow: none; }
+
+/* =============================================================
+   CARDS, CHIPS, SURFACES
+   ============================================================= */
+.card {
+  background: var(--bg-1);
+  border-radius: var(--r-md);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--black-5);
+}
+.card-lg { border-radius: var(--r-lg); padding: var(--space-7); }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--r-pill);
+  background: var(--black-5);
+  color: var(--fg-2);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.02em;
+}
+.chip-purple { background: rgba(102, 16, 242, 0.10); color: var(--purple-110); }
+.chip-blue   { background: rgba(0, 127, 255, 0.10);   color: var(--blue-110); }
+.chip-cyan   { background: rgba(4, 228, 244, 0.18);   color: var(--blue-130); }
+.chip-orange { background: rgba(255, 164, 0, 0.16);   color: #B86E00; }
+
+/* =============================================================
+   HERO / DARK BG UTILITIES
+   ============================================================= */
+.bg-brand {
+  background: var(--gradient-brand-hero);
+  color: var(--black-0);
+}
+.bg-purple { background: var(--purple-100); color: var(--black-0); }
+.bg-dark   { background: var(--purple-180); color: var(--black-0); }
+
+.bg-brand h1, .bg-brand h2, .bg-brand h3, .bg-brand .display,
+.bg-purple h1, .bg-purple h2, .bg-purple h3,
+.bg-dark   h1, .bg-dark   h2, .bg-dark   h3 { color: var(--black-0); }
+.bg-brand p, .bg-purple p, .bg-dark p { color: rgba(255, 255, 255, 0.86); }
+.bg-brand .eyebrow, .bg-purple .eyebrow, .bg-dark .eyebrow { color: var(--cyan-100); }
+
+/* =============================================================
+   FORM CONTROLS
+   ============================================================= */
+.input {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  padding: 12px 16px;
+  border: 1px solid var(--black-40);
+  border-radius: var(--r-sm);
+  background: var(--black-0);
+  color: var(--fg-1);
+  width: 100%;
+  transition: border-color var(--dur-fast) var(--ease-out-soft),
+              box-shadow var(--dur-fast) var(--ease-out-soft);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--blue-100);
+  box-shadow: 0 0 0 3px rgba(0, 127, 255, 0.18);
+}
+.input::placeholder { color: var(--black-70); }
+
+.label {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--fg-2);
+  margin-bottom: 6px;
+}
+
+/* =============================================================
+   ICONOGRAPHY HELPERS
+   ============================================================= */
+.icon { width: 24px; height: 24px; display: inline-block; vertical-align: middle; }
+.icon-sm { width: 16px; height: 16px; }
+.icon-lg { width: 32px; height: 32px; }
+
+/* =============================================================
+   GLASS — frosted card for dark / brand-gradient backgrounds
+   ============================================================= */
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-radius: var(--r-lg);
+  color: #fff;
+}
+.glass-strong {
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border-strong);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-radius: var(--r-lg);
+  color: #fff;
+}
