@@ -266,11 +266,16 @@ func NewINGClient() (*INGClient, error) {
 		}
 	}
 
+	clientID := os.Getenv("ING_SANDBOX_CLIENT_ID")
+	if clientID == "" {
+		clientID = "5ca1ab1e-c0ca-c01a-cafe-154deadbea75"
+	}
+
 	return &INGClient{
 		client:          httpClient,
 		signingKey:      rsaKey,
 		signingCertHash: x5tHash,
-		clientID:        "5ca1ab1e-c0ca-c01a-cafe-154deadbea75",
+		clientID:        clientID,
 	}, nil
 }
 
