@@ -536,34 +536,42 @@
           <div style="min-width:0; flex-grow:1;">
             <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
               <h3 class="pbb-title" style="font-size:18px;">Pay with Wero</h3>
-              <span class="pbb-dnb-badge" style="background:#EBF5FF; border-color:#BFDBFE; color:#1E40AF;">EPI Standard</span>
+              <span class="pbb-dnb-badge" style="background:#EBF5FF; border-color:#BFDBFE; color:#1E40AF;">EPI P2M Standard</span>
             </div>
-            <p class="pbb-sub" style="margin-top:2px;">European instant account-to-account payment</p>
+            <p class="pbb-sub" style="margin-top:2px;">European single immediate e-commerce payment</p>
           </div>
         </div>
 
-        <div class="radar-status" role="status" aria-live="polite">
+        <!-- Flow step status badge reflecting EPI Single Immediate lifecycle -->
+        <div class="radar-status" role="status" aria-live="polite" id="wero-lifecycle-badge">
           <span class="dot-blink" style="background:#2563EB;"></span>
-          <span>Waiting for scan in your Wero or bank app...</span>
+          <span id="wero-lifecycle-text">Step 1/4: Waiting for Consent QR scan in Wero wallet...</span>
         </div>
 
-        <div class="pbb-qr-wrapper" id="wero-qr-box" style="border: 2px solid #20221F;"></div>
+        <div class="pbb-qr-wrapper" id="wero-qr-box" style="border: 2px solid #20221F; position:relative;"></div>
 
-        <div style="text-align:center; max-width:320px;">
-          <p style="font-size:13px; font-weight:600; color:#20221F; margin:0 0 4px;">Scan with Wero or your banking app</p>
+        <!-- Telemetry & EPI Resource Context -->
+        <div style="width:100%; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:10px 14px; font-size:11.5px; line-height:1.5; color:#475569; display:flex; flex-direction:column; gap:4px;">
+          <div style="display:flex; justify-content:space-between;"><span style="color:#64748B;">EPI Consent ID:</span><span style="font-family:monospace; font-weight:600; color:#0F172A;" id="wero-consent-id"></span></div>
+          <div style="display:flex; justify-content:space-between;"><span style="color:#64748B;">Acceptor (Merchant):</span><span style="font-weight:600; color:#0F172A;">Amnesia Ibiza (ES)</span></div>
+          <div style="display:flex; justify-content:space-between;"><span style="color:#64748B;">Settlement Rail:</span><span style="font-weight:600; color:#2563EB;">SEPA Instant (TIPS / RT1)</span></div>
+        </div>
+
+        <div style="text-align:center; max-width:330px;">
+          <p style="font-size:13px; font-weight:600; color:#20221F; margin:0 0 4px;">Scan with Wero or your European banking app</p>
           <p style="font-size:12px; color:#797C74; margin:0; line-height:1.4;">Supported by BNP Paribas, BPCE, Crédit Agricole, ING, Rabobank, Deutsche Bank, Sparkassen, and more.</p>
         </div>
 
-        <!-- Mobile deep link fallback -->
+        <!-- Mobile deep link fallback (Variant B: m-commerce app-to-wallet) -->
         <a href="https://wero-wallet.eu/pay/amnesia" target="_blank" rel="noopener noreferrer" id="wero-app-link" style="font-size:13px; font-weight:600; color:#0D314B; text-decoration:underline;">
-          Open Wero app on this device ↗
+          Open Wero app on this device (M-commerce) ↗
         </a>
 
         <!-- Simulator Button for Instant Sandbox Verification -->
         <div class="sim-box" id="wero-sim-box">
-          <div style="font-size:11px; font-weight:700; color:#6B7280; text-transform:uppercase;">EPI Sandbox Verification</div>
+          <div style="font-size:11px; font-weight:700; color:#6B7280; text-transform:uppercase;">EPI Sandbox Pipeline Verification</div>
           <button type="button" class="sim-btn" id="btn-wero-simulate" style="background:#2563EB;">
-            ⚡ Simulate Wero App Approval
+            ⚡ Simulate Step-by-Step EPI Flow (Consent → Auth → Capture → Settlement)
           </button>
         </div>
       </div>
@@ -1009,32 +1017,54 @@
   /* ---------- Wero flow (EPI European Payments Initiative) ---------- */
   var weroQrBox = $('wero-qr-box');
   var btnWeroSimulate = $('btn-wero-simulate');
+  var weroLifecycleBadge = $('wero-lifecycle-badge');
+  var weroLifecycleText = $('wero-lifecycle-text');
+  var weroConsentIdEl = $('wero-consent-id');
 
   window.openWero = openWero;
   function openWero() {
     clearTimers();
-    // Render official EPI Wero QR payload standard (EPC QR / Wero tokenized payload)
-    var weroPayload = 'wero://pay?amount=' + encodeURIComponent(CONFIG.order.amount) +
-      '&currency=' + encodeURIComponent(CONFIG.order.currency) +
-      '&recipient=Amnesia%20Ibiza' +
+    var consentId = 'cst_' + Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 6);
+    weroConsentIdEl.textContent = consentId;
+
+    // Follow official EPI Direct QR payload specification
+    var weroPayload = 'https://wero.epicompany.eu/qr/v1/consent/' + consentId +
+      '?amt=' + encodeURIComponent(CONFIG.order.amount) +
+      '&cur=' + encodeURIComponent(CONFIG.order.currency) +
+      '&acpt=Amnesia+Ibiza' +
       '&ref=' + encodeURIComponent(CONFIG.order.reference) +
-      '&token=WERO-EPI-' + Date.now();
+      '&ret=' + encodeURIComponent(window.location.origin + window.location.pathname + '?payment_id=' + consentId);
     renderQr(weroQrBox, weroPayload);
 
+    weroLifecycleText.textContent = 'Step 1/4: Waiting for Consent QR scan in Wero wallet...';
     btnWeroSimulate.disabled = false;
-    btnWeroSimulate.textContent = '⚡ Simulate Wero App Approval';
+    btnWeroSimulate.textContent = '⚡ Simulate Step-by-Step EPI Flow (Consent → Auth → Capture → Settlement)';
     showPane('wero');
   }
 
   btnWeroSimulate.addEventListener('click', function () {
     btnWeroSimulate.disabled = true;
-    btnWeroSimulate.textContent = '⚡ Settling via EPI SCT-Inst...';
+
+    // Step 1: Consent granted in wallet via SCA
+    weroLifecycleText.textContent = 'Step 1/4: SCA Consent granted by Consumer (JWS Token signed)...';
+
     setTimeout(function () {
-      settleSuccess({
-        clearing_reference: 'WERO-EPI-' + Date.now(),
-        rail: 'Wero · European Payments Initiative (SEPA Instant)'
-      });
-    }, 700);
+      // Step 2: Payment request created and authorised by Consumer PSP
+      weroLifecycleText.textContent = 'Step 2/4: Payment Authorisation granted by Consumer PSP...';
+
+      setTimeout(function () {
+        // Step 3: Payment captured by Acceptor PSP
+        weroLifecycleText.textContent = 'Step 3/4: Payment Capture accepted by EPI Central Services...';
+
+        setTimeout(function () {
+          // Step 4: SCT Inst asynchronous settlement
+          settleSuccess({
+            clearing_reference: 'EPI-SCT-INST-' + Date.now(),
+            rail: 'Wero · European Payments Initiative (SEPA Instant TIPS / RT1)'
+          });
+        }, 800);
+      }, 800);
+    }, 800);
   });
 
   /* ---------- Pay by bank (existing flow) ---------- */
