@@ -3,664 +3,338 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Secure Checkout — Amnesia Ibiza</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-<script src="qrcode.min.js"></script>
+<title>Checkout single scrolling pane</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap">
 <script src="card-utils.js"></script>
 <style>
-  *, *::before, *::after { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
-  body {
-    min-height: 100vh;
-    box-sizing: border-box;
-    padding: 48px 24px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-    background: #F5F5EF;
-    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-    color: #20221F;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
+body{margin:0}
+a{color:#000000;text-decoration:none}
+a:focus-visible,button:focus-visible{outline:2px solid #1D1E1D;outline-offset:3px;border-radius:4px}
+.fld{width:100%;height:48px;box-sizing:border-box;padding:0 14px;border:1px solid #DEDEDE;border-radius:12px;font:500 14px/1 Inter,system-ui,sans-serif;letter-spacing:-0.01em;color:#000000;background:#FFFFFF;transition:border-color 150ms ease,box-shadow 150ms ease}
+.fld::placeholder{color:#707070;opacity:1}
+.fld:hover{border-color:#C9C9C9}
+.fld:focus{outline:none;border-color:#1D1E1D;box-shadow:0 0 0 3px rgba(29,30,29,0.12)}
+.fld-err,.fld-err:hover{border-color:#B12D2D}
+.fld-err:focus{border-color:#B12D2D;box-shadow:0 0 0 3px rgba(177,45,45,0.15)}
+.xp{transition:filter 150ms ease}
+.xp:hover{filter:brightness(0.96)}
+.pmrow:hover{background:#F6F6F6 !important}
+.paybtn{transition:filter 150ms ease}
+.paybtn:not(:disabled):hover{filter:brightness(1.3)}
 
-  a { color: #20221F; text-decoration: none; }
-  a:hover { text-decoration: underline; text-underline-offset: 3px; }
-  a:focus-visible { outline: 2px solid #20221F; outline-offset: 3px; border-radius: 4px; }
-  button:focus-visible, input:focus-visible { outline: 2px solid #20221F; outline-offset: 2px; }
+/* Responsive SinglePane layout */
+.mobile-summary-bar {
+  display: none;
+}
+@media (max-width: 999px) {
+  .mobile-summary-bar {
+    display: block;
+  }
+  .order-summary-aside {
+    display: none !important;
+  }
+  .payment-col-inner {
+    padding: 24px 16px 32px !important;
+  }
+  .payment-col-stack {
+    margin-left: 0 !important;
+    max-width: 100% !important;
+  }
+}
 
-  /* Main Checkout Split Card */
-  .checkout-main-card {
-    width: 100%;
-    max-width: 1000px;
-    min-height: 740px;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    background: #FFFFFF;
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 2px 6px rgba(25,32,16,0.03), 0 20px 70px -16px rgba(25,32,16,0.16);
-  }
-
-  /* Left Column: merchant side (neutral grey so it reads as "the merchant's info") */
-  .col-summary {
-    flex: 1 1 360px;
-    min-width: 0;
-    box-sizing: border-box;
-    padding: 40px 36px 36px;
-    display: flex;
-    flex-direction: column;
-    gap: 28px;
-    background: #F4F4F4;
-  }
-  .back-link {
-    align-self: flex-start;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin: -8px 0 -12px;
-    font-size: 14px;
-    font-weight: 500;
-    letter-spacing: -0.02em;
-    color: #666666;
-  }
-  .back-link:hover { color: #20221F; }
-
-  .merchant-badge { display: flex; flex-direction: row; align-items: center; gap: 20px; }
-  .merchant-logo-img {
-    width: 88px; height: 88px; flex-shrink: 0; border-radius: 16px; overflow: hidden; display: flex;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  }
-  .merchant-logo-img img { width: 88px; height: 88px; object-fit: cover; display: block; }
-  .merchant-title { margin: 0; font-size: 26px; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em; color: #20221F; }
-  .merchant-sub { font-size: 13px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #666666; }
-
-  .order-heading { margin: 0; font-size: 24px; line-height: 1.4; font-weight: 600; letter-spacing: -0.02em; color: #20221F; }
-  .order-meta-info {
-    display: flex; flex-direction: column; gap: 4px; margin-top: 6px;
-    font-size: 13px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #666666;
-  }
-  .order-meta-row { display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; }
-  .order-meta-row[hidden] { display: none; }
-
-  .price-display { display: flex; flex-direction: row; align-items: baseline; gap: 10px; }
-  .price-amount { font-size: 40px; line-height: 1.4; font-weight: 600; letter-spacing: -0.04em; color: #20221F; }
-  .price-currency { font-size: 13px; font-weight: 500; letter-spacing: -0.02em; color: #666666; }
-  .items-desc { font-size: 13px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #666666; }
-
-  /* Right Column: payment panes */
-  .col-payment {
-    flex: 1 1 480px;
-    min-width: 0;
-    box-sizing: border-box;
-    border-left: 1px solid #ECEDE7;
-    display: flex;
-    flex-direction: column;
-    background: #FFFFFF;
-  }
-  .pane {
-    display: none;
-    flex-grow: 1;
-    box-sizing: border-box;
-    padding: 36px 32px 28px;
-    flex-direction: column;
-    gap: 14px;
-    animation: fadeIn 180ms ease-out;
-  }
-  .pane.active { display: flex; }
-  .pane-handoff, .pane-success { align-items: center; text-align: center; gap: 16px; }
-
-  .xp-label { font-size: 13px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #797C74; }
-  .xp-row { display: flex; flex-direction: row; gap: 10px; }
-  .xp-btn {
-    flex: 1 1 0; min-width: 0; height: 48px; box-sizing: border-box;
-    display: flex; align-items: center; justify-content: center; padding: 0;
-    border: 0; border-radius: 8px; cursor: pointer;
-    transition: filter 150ms ease, transform 100ms ease;
-  }
-  .xp-btn:hover { filter: brightness(0.96); transform: translateY(-1px); }
-  .xp-apple { background: #191B18; }
-  .xp-paypal { background: #FFC439; }
-  .xp-gpay { background: #FFFFFF; border: 1px solid #E3E4DE; }
-
-  .divider-row { display: flex; align-items: center; gap: 14px; margin: 8px 0 6px; color: #797C74; font-size: 12px; font-weight: 500; letter-spacing: -0.02em; }
-  .divider-line { flex-grow: 1; height: 1px; background: #ECEDE7; }
-
-  .methods-avail-count { align-self: flex-end; font-size: 13px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #797C74; }
-
-  .plist {
-    max-height: 340px; overflow-y: auto; padding: 0 4px 0 0;
-    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-content: start;
-    scrollbar-width: thin; scrollbar-color: #8A8D85 transparent;
-  }
-  .plist::-webkit-scrollbar { width: 6px; }
-  .plist::-webkit-scrollbar-track { background: transparent; }
-  .plist::-webkit-scrollbar-thumb { background: #8A8D85; border-radius: 3px; }
-
-  .tile {
-    min-width: 0; box-sizing: border-box; display: flex; flex-direction: row; align-items: center; gap: 10px;
-    padding: 12px; background: #FFFFFF; border: 1px solid #E3E4DE; border-radius: 10px; cursor: pointer;
-    font-family: inherit; text-align: left; color: #20221F;
-    transition: border-color 150ms ease, box-shadow 150ms ease, transform 100ms ease;
-  }
-  .tile:hover { border-color: #CFD1CA; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-  .tile.selected { border-color: #20221F; box-shadow: 0 0 0 1px #20221F; }
-  .tile-icon-box {
-    width: 36px; height: 36px; box-sizing: border-box; flex-shrink: 0; border-radius: 7px; overflow: hidden;
-    background: #F5F6F1; display: flex; align-items: center; justify-content: center;
-  }
-  .tile-icon-box svg { display: block; }
-  .tile-icon-box img { max-width: 100%; max-height: 100%; display: block; object-fit: contain; }
-  .tile-body { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-  .tile-name { font-size: 14px; line-height: 1.4; font-weight: 600; letter-spacing: -0.02em; color: #20221F; margin: 0; }
-  .tile-desc { font-size: 12px; line-height: 1.3; font-weight: 500; letter-spacing: -0.02em; color: #797C74; overflow-wrap: anywhere; margin: 0; }
-
-  .status-notice {
-    box-sizing: border-box; padding: 10px 16px; border-radius: 10px; background: #F5F5EF; text-align: center;
-    font-size: 13px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #797C74; margin-top: 4px;
-  }
-
-  /* Footer bar: "Secured by CM.com" (default) / "Powered by CM.com" (Bancontact) */
-  .secured-bar {
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    padding: 18px 32px; background: #0D314B; color: #FFFFFF;
-    font-size: 14px; font-weight: 500; letter-spacing: -0.01em;
-  }
-  .secured-bar img { height: 18px; width: auto; display: block; }
-  .secured-bar[data-variant="powered"] { font-size: 12px; padding: 20px 32px; }
-  .secured-bar[data-variant="powered"] .lock { display: none; }
-  .secured-bar[data-variant="powered"] img { height: 16px; }
-
-  .design-preview-text { font-size: 12px; font-weight: 500; letter-spacing: -0.02em; color: #797C74; }
-
-  /* ---------- Shared form controls ---------- */
-  .field { display: flex; flex-direction: column; gap: 6px; }
-  .field-label { font-size: 13px; font-weight: 500; letter-spacing: -0.02em; color: #797C74; }
-  .fld {
-    width: 100%; height: 48px; box-sizing: border-box; padding: 0 14px;
-    border: 1px solid #E3E4DE; border-radius: 10px;
-    font: 500 15px/1 'Inter', system-ui, sans-serif; letter-spacing: -0.01em; color: #20221F; background: #FFFFFF;
-    transition: border-color 150ms ease, box-shadow 150ms ease;
-  }
-  .fld::placeholder { color: #9A9D95; opacity: 1; }
-  .fld:hover { border-color: #CFD1CA; }
-  .fld:focus { outline: none; border-color: #20221F; box-shadow: 0 0 0 3px rgba(32,34,31,0.1); }
-  .fld.err, .fld.err:hover { border-color: #D92D20; }
-  .fld.err:focus { border-color: #D92D20; box-shadow: 0 0 0 3px rgba(217,45,32,0.15); }
-  .field-error { font-size: 12px; font-weight: 500; color: #B42318; }
-  .field-error[hidden] { display: none; }
-  .form-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-
-  .btn-pay-action {
-    width: 100%; height: 48px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8px;
-    background: #191B18; color: #FFFFFF; border: 0; border-radius: 10px;
-    font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
-    transition: filter 150ms ease, transform 100ms ease; margin-top: 4px;
-  }
-  .btn-pay-action:hover:not(:disabled) { filter: brightness(1.2); transform: translateY(-1px); }
-  .btn-pay-action:disabled { opacity: 0.45; cursor: not-allowed; }
-
-  /* ---------- Card pane: live flip card ---------- */
-  .cc-scene { width: 100%; max-width: 380px; margin: 0 auto 4px; aspect-ratio: 1.586; perspective: 1000px; }
-  .cc-flip {
-    position: relative; width: 100%; height: 100%; transform-style: preserve-3d;
-    transition: transform 600ms cubic-bezier(0.22,1,0.36,1);
-  }
-  .cc-flip.flipped { transform: rotateY(180deg); }
-  .cc-face {
-    position: absolute; inset: 0; box-sizing: border-box; border-radius: 16px; color: #FFFFFF;
-    box-shadow: 0 18px 36px rgba(16,30,30,0.22);
-    -webkit-backface-visibility: hidden; backface-visibility: hidden;
-    background: linear-gradient(135deg, #4C14B1 0%, #0562BB 100%);
-  }
-  .cc-flip[data-brand="visa"] .cc-face { background: linear-gradient(135deg, #0D314B 0%, #0562BB 100%); }
-  .cc-flip[data-brand="mastercard"] .cc-face { background: linear-gradient(135deg, #212E39 0%, #4C14B1 100%); }
-  .cc-flip[data-brand="amex"] .cc-face { background: linear-gradient(135deg, #0A4F5C 0%, #0C6B7A 100%); }
-  .cc-front { padding: 22px 24px; display: flex; flex-direction: column; justify-content: space-between; }
-  .cc-back { transform: rotateY(180deg); padding: 22px 0; display: flex; flex-direction: column; gap: 18px; }
-  .cc-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; }
-  .cc-brand { width: 64px; height: 40px; border-radius: 6px; background: #FFFFFF; display: none; align-items: center; justify-content: center; }
-  .cc-flip[data-brand="visa"] .cc-brand, .cc-flip[data-brand="mastercard"] .cc-brand, .cc-flip[data-brand="amex"] .cc-brand { display: flex; }
-  .cc-brand img { width: 40px; height: 40px; object-fit: contain; }
-  .cc-num {
-    font-size: 22px; line-height: 1.2; font-weight: 600; letter-spacing: 0.08em; font-variant-numeric: tabular-nums;
-    padding: 6px 8px; margin: 0 -8px; border-radius: 6px; white-space: nowrap; overflow: hidden;
-    transition: background 200ms, opacity 200ms;
-  }
-  .cc-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
-  .cc-cell { padding: 4px 8px; margin: -4px -8px; border-radius: 6px; transition: background 200ms; min-width: 0; }
-  .cc-cell.exp { flex-shrink: 0; }
-  .cc-cap { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: rgba(255,255,255,0.85); }
-  .cc-val { font-size: 14px; font-weight: 600; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity 200ms; }
-  .cc-dim { opacity: 0.7; }
-  .cc-hl { background: rgba(255,255,255,0.2); }
-  .cc-strip { height: 44px; background: #101E1E; margin-top: 6px; }
-  .cc-cvc-wrap { padding: 0 24px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
-  .cc-cvc {
-    width: 100%; height: 40px; border-radius: 6px; background: #FFFFFF; color: #101E1E;
-    display: flex; align-items: center; justify-content: flex-end; padding: 0 14px;
-    font-size: 16px; font-weight: 700; letter-spacing: 0.12em; font-variant-numeric: tabular-nums;
-  }
-  .card-form { display: flex; flex-direction: column; gap: 14px; }
-
-  /* ---------- Bancontact pane ---------- */
-  .bc-section { display: flex; flex-direction: column; gap: 14px; }
-  .bc-head { display: flex; flex-direction: row; align-items: center; gap: 12px; }
-  .bc-logo { width: 40px; height: 40px; box-sizing: border-box; flex-shrink: 0; border-radius: 8px; border: 1px solid #E3E4DE; background: #FFFFFF; display: flex; align-items: center; justify-content: center; }
-  .bc-logo img { width: 34px; height: 34px; object-fit: contain; }
-  .bc-title { margin: 0; font-size: 16px; line-height: 1.4; font-weight: 600; letter-spacing: -0.02em; }
-  .bc-tagline { font-size: 12px; line-height: 1.3; font-weight: 500; letter-spacing: -0.02em; color: #797C74; }
-  .bc-qr-card { display: flex; flex-direction: row; align-items: center; gap: 20px; box-sizing: border-box; padding: 16px; border: 1px solid #E3E4DE; border-radius: 12px; }
-  .bc-qr { flex-shrink: 0; width: 132px; height: 132px; border-radius: 6px; overflow: hidden; background: #FFFFFF; display: flex; align-items: center; justify-content: center; }
-  .bc-qr svg { width: 100%; height: 100%; display: block; }
-  .bc-steps { margin: 0; padding: 0 0 0 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #3A3C37; }
-  .bc-wait { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: -0.02em; color: #797C74; }
-  .bc-pulse { width: 8px; height: 8px; border-radius: 4px; background: #20221F; flex-shrink: 0; animation: pulse 1.6s ease-in-out infinite; }
-  .bc-or { display: flex; align-items: center; gap: 14px; color: #797C74; font-size: 12px; font-weight: 500; letter-spacing: -0.02em; }
-  .bc-or span.line { flex-grow: 1; height: 1px; background: #ECEDE7; }
-  @keyframes pulse { 0%,100% { opacity: 0.25; } 50% { opacity: 1; } }
-
-  /* ---------- Pay by bank flow (unchanged behaviour) ---------- */
-  .pbb-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-  .pbb-title { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: #20221F; }
-  .pbb-sub { margin: 4px 0 0; font-size: 13px; color: #797C74; letter-spacing: -0.01em; }
-  .pbb-dnb-badge { background: #F5F5EF; border: 1px solid #E3E4DE; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; color: #555850; white-space: nowrap; }
-  .pbb-search-field {
-    width: 100%; height: 48px; box-sizing: border-box; padding: 0 14px; border: 1px solid #E3E4DE; border-radius: 10px;
-    font: 500 14px/1 'Inter', system-ui, sans-serif; letter-spacing: -0.01em; color: #20221F; background: #FFFFFF;
-    transition: border-color 150ms ease, box-shadow 150ms ease;
-  }
-  .pbb-search-field:focus { outline: none; border-color: #20221F; box-shadow: 0 0 0 3px rgba(32,34,31,0.08); }
-  .pbb-tabs { display: flex; gap: 6px; margin-top: -6px; }
-  .pbb-tab { padding: 5px 12px; font-size: 12px; font-weight: 500; border-radius: 999px; border: 1px solid #E3E4DE; background: #F5F5EF; color: #797C74; cursor: pointer; }
-  .pbb-tab.active { background: #20221F; color: #FFFFFF; border-color: #20221F; }
-  .pbb-bank-list {
-    max-height: 250px; overflow-y: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-right: 4px;
-    scrollbar-width: thin; scrollbar-color: #8A8D85 transparent;
-  }
-  .back-to-methods-btn {
-    align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500;
-    letter-spacing: -0.02em; color: #797C74; background: transparent; border: none; cursor: pointer; padding: 4px 0; border-radius: 4px;
-  }
-  .back-to-methods-btn:hover { color: #20221F; text-decoration: underline; }
-  .pbb-qr-wrapper {
-    background: #FFFFFF; padding: 16px; border-radius: 16px; border: 1px solid #E3E4DE; box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-    width: 190px; height: 190px; display: flex; align-items: center; justify-content: center; margin: 4px auto;
-  }
-  .pbb-qr-wrapper svg { width: 100%; height: 100%; display: block; }
-  .radar-status { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: #0D314B; background: #EAF2F8; padding: 6px 14px; border-radius: 999px; }
-  .dot-blink { width: 8px; height: 8px; border-radius: 50%; background: #0070BA; animation: blink 1.3s infinite ease-in-out; }
-  @keyframes blink { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.7); } }
-  .sim-box { background: #F9FAFB; border: 1px dashed #D1D5DB; border-radius: 10px; padding: 12px 14px; width: 100%; text-align: left; margin-top: 6px; }
-  .sim-btn {
-    background: #10B981; color: #FFFFFF; border: none; border-radius: 8px; padding: 9px 12px; font-size: 13px; font-weight: 600;
-    width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 6px;
-  }
-  .sim-btn:hover { background: #059669; }
-  .sim-btn:disabled { opacity: 0.6; cursor: wait; }
-  .check-green-circle { width: 58px; height: 58px; border-radius: 50%; background: #E3FCEF; border: 1.5px solid #57D9A3; display: flex; align-items: center; justify-content: center; color: #00875A; }
-  .receipt-table { width: 100%; background: #F5F5EF; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; text-align: left; }
-  .receipt-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-  .receipt-row .k { color: #797C74; }
-  .receipt-row .v { font-weight: 600; color: #20221F; text-align: right; }
-
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-
-  @media (prefers-reduced-motion: reduce) {
-    .cc-flip { transition: none; }
-    .bc-pulse, .dot-blink, .pane { animation: none; }
-  }
-  @media (max-width: 780px) {
-    body { padding: 16px 12px; }
-    .col-payment { border-left: 0; border-top: 1px solid #ECEDE7; }
-    .plist, .pbb-bank-list { grid-template-columns: 1fr; }
-    .col-summary { padding: 28px 24px; }
-    .pane { padding: 28px 24px; }
-    .bc-qr-card { flex-direction: column; align-items: flex-start; }
-  }
 </style>
 </head>
 <body>
 
-  <!-- ============ SPLIT CARD ============ -->
-  <main class="checkout-main-card" role="main" aria-label="Amnesia Ibiza Checkout">
+  <!-- MOBILE ORDER SUMMARY ACCORDION BAR (Visible on mobile < 1000px) -->
+  <div class="mobile-summary-bar">
+    <div style="background: #F4F4F4; border-bottom: 1px solid #E6E6E6;">
+<button type="button" aria-expanded="false" id="btn-summary-toggle"  style="width: 100%; box-sizing: border-box; display: flex; flex-direction: row; align-items: center; gap: 8px; padding: 16px; background: transparent; border: 0; font-family: inherit; font-size: 14px; font-weight: 600; letter-spacing: -0.02em; color: #000000; cursor: pointer; text-align: left;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8z"></path><path d="M9 8V6a3 3 0 0 1 6 0v2"></path></svg>
+<span style="flex-grow: 1;">Order summary</span>
+<span style="font-size: 16px; font-weight: 700; letter-spacing: -0.02em;">€120.00</span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" id="summary-chevron" style="transform: rotate(0deg); transition: transform 200ms ease;"><path d="M6 9l6 6 6-6"></path></svg>
+</button>
+<div id="mobile-summary-dropdown" style="display:none;">
+<div style="box-sizing: border-box; padding: 4px 16px 24px;">
+<div style="display: flex; flex-direction: column; gap: 20px;">
+<div style="display: flex; flex-direction: row; align-items: center; gap: 14px;">
+<span style="position: relative; width: 64px; height: 64px; flex-shrink: 0; display: block;">
+<img src="assets/merchant-amnesia-ibiza.png" alt="" style="width: 64px; height: 64px; border-radius: 12px; object-fit: cover; display: block; border: 1px solid #DEDEDE; box-sizing: border-box;">
+<span style="position: absolute; top: -8px; right: -8px; min-width: 22px; height: 22px; box-sizing: border-box; padding: 0 6px; border-radius: 11px; background: #191B18; color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;">2</span>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+<span style="font-size: 14px; font-weight: 600; letter-spacing: -0.02em;">General admission</span>
+<span style="font-size: 12px; font-weight: 500; letter-spacing: -0.02em; color: #707070;">Amnesia Ibiza · 7 November 2026</span>
+</span>
+<span style="font-size: 14px; font-weight: 600; letter-spacing: -0.02em;">€120.00</span>
+</div>
+<div style="display: flex; flex-direction: row; align-items: center; gap: 8px; box-sizing: border-box; padding: 6px 6px 6px 14px; border-radius: 12px; background: #FFFFFF; border: 1px solid #DEDEDE;">
+<span style="flex-grow: 1; min-width: 0; font-size: 14px; font-weight: 500; letter-spacing: -0.02em; color: #707070;">Discount code or gift card</span>
+<button type="button" style="height: 34px; padding: 0 12px; border-radius: 8px; border: 1px solid #DEDEDE; background: #F5F5F5; font-family: inherit; font-size: 14px; font-weight: 700; color: #000000; cursor: pointer;">Apply</button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<div style="display: flex; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 14px; font-weight: 500; letter-spacing: -0.02em;"><span>Date</span><span>7 November 2026, 14:32</span></div>
+<div style="display: flex; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 14px; font-weight: 500; letter-spacing: -0.02em;"><span>Order reference</span><span>AMN-2026-08421</span></div>
+<div style="height: 1px; background: #DDDDDD; margin: 6px 0;"></div>
+<div style="display: flex; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 14px; font-weight: 500; letter-spacing: -0.02em;"><span>Subtotal (2 tickets)</span><span>€120.00</span></div>
+<div style="display: flex; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 14px; font-weight: 500; letter-spacing: -0.02em;"><span>Service fees</span><span>Included</span></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="display: flex; flex-direction: row; align-items: baseline; justify-content: space-between;"><span style="font-size: 18px; font-weight: 700; letter-spacing: -0.02em;">Total</span><span style="display: flex; align-items: baseline; gap: 8px;"><span style="font-size: 12px; font-weight: 500; color: #707070;">EUR</span><span style="font-size: 22px; font-weight: 700; letter-spacing: -0.03em;">€120.00</span></span></div>
+<span style="font-size: 14px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #707070;">Includes €20.83 VAT</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; font-weight: 500; letter-spacing: -0.02em;">
+<span style="display: flex; align-items: center; gap: 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1F7A4D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>E-tickets sent instantly to your email</span>
+<span style="display: flex; align-items: center; gap: 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1F7A4D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>All fees included, no surprises</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+  </div>
 
-    <!-- LEFT COLUMN: merchant side -->
-    <section class="col-summary">
-      <!-- The single Back control: returns the payer to the merchant shop. Target comes from CONFIG.merchant.returnUrl. -->
-      <a class="back-link" id="btn-back-merchant" href="#" aria-label="Back to Amnesia Ibiza">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
-        <span>Back</span>
-      </a>
+  <!-- MAIN SINGLE PANE DESKTOP + MOBILE -->
+  <helmet>
+<style>
+body{margin:0}
+a{color:#000000;text-decoration:none}
+a:focus-visible,button:focus-visible{outline:2px solid #1D1E1D;outline-offset:3px;border-radius:4px}
+.fld{width:100%;height:48px;box-sizing:border-box;padding:0 14px;border:1px solid #DEDEDE;border-radius:12px;font:500 14px/1 Inter,system-ui,sans-serif;letter-spacing:-0.01em;color:#000000;background:#FFFFFF;transition:border-color 150ms ease,box-shadow 150ms ease}
+.fld::placeholder{color:#707070;opacity:1}
+.fld:hover{border-color:#C9C9C9}
+.fld:focus{outline:none;border-color:#1D1E1D;box-shadow:0 0 0 3px rgba(29,30,29,0.12)}
+.fld-err,.fld-err:hover{border-color:#B12D2D}
+.fld-err:focus{border-color:#B12D2D;box-shadow:0 0 0 3px rgba(177,45,45,0.15)}
+.xp{transition:filter 150ms ease}
+.xp:hover{filter:brightness(0.96)}
+.pmrow:hover{background:#F6F6F6 !important}
+.paybtn{transition:filter 150ms ease}
+.paybtn:not(:disabled):hover{filter:brightness(1.3)}
+</style>
+</helmet>
+<div class="single-pane-wrap" style="min-height: 100vh; display: flex; flex-direction: row; flex-wrap: wrap; background: #FFFFFF; font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif; color: #000000;">
+<div class="payment-col" style="flex: 1 1 560px; min-width: 0; background: #FFFFFF;">
+<div class="payment-col-inner" style="box-sizing: border-box; padding: 40px 48px 48px 40px; display: flex; flex-direction: column;">
+<div class="payment-col-stack" style="max-width: 540px; width: 100%; margin-left: auto; display: flex; flex-direction: column; gap: 28px;">
+<a href="https://amnesia.es" id="back-merchant-link" aria-label="Back to Amnesia Ibiza" title="Placeholder: production uses the merchant return/cancel URL" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; letter-spacing: -0.02em; color: #666666;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg><span>Back</span></a>
+<div style="display: flex; flex-direction: row; align-items: center; gap: 12px;">
+<div role="img" aria-label="Amnesia Ibiza logo" style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px; overflow: hidden; display: flex;"><img src="assets/merchant-amnesia-ibiza.png" alt="" style="width: 44px; height: 44px; object-fit: cover; display: block;"></div>
+<div style="display: flex; flex-direction: column; gap: 1px;"><h1 style="margin: 0; font-size: 18px; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em;">Amnesia Ibiza</h1><span style="font-size: 12px; font-weight: 500; letter-spacing: -0.02em; color: #666666;">amnesia.es</span></div>
+</div>
 
-      <div class="merchant-badge">
-        <div class="merchant-logo-img" role="img" aria-label="Amnesia Ibiza logo">
-          <img src="assets/amnesia.png" alt="">
-        </div>
-        <div style="display:flex; flex-direction:column; gap:3px; min-width:0;">
-          <h1 class="merchant-title" id="merchant-name">Amnesia Ibiza</h1>
-          <span class="merchant-sub" id="merchant-site">amnesia.es</span>
-        </div>
-      </div>
+<div style="display: flex; flex-direction: column; gap: 12px; align-items: stretch;">
+<span style="text-align: center; font-size: 14px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #707070;">Express checkout</span>
+<div style="display: flex; flex-direction: row; gap: 10px;">
+<button type="button" class="xp" aria-label="Pay with Apple Pay" title="Placeholder: replace with Apple's own Apple Pay button (black)" style="flex: 1 1 0; min-width: 0; height: 48px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; padding: 0; background: #191B18; border: 0; border-radius: 8px; cursor: pointer;">
+<svg height="42" viewBox="0 0 109 70" aria-hidden="true" style="display: block;"><g fill="#FFFFFF"><path d="M30.36,23.61a6.09,6.09,0,0,0,1.39-4.3,6,6,0,0,0-4,2.05,5.63,5.63,0,0,0-1.42,4.13,5,5,0,0,0,4-1.88"></path><path d="M31.73,25.79C29.52,25.66,27.64,27,26.59,27s-2.67-1.18-4.42-1.15a6.53,6.53,0,0,0-5.54,3.36c-2.37,4.09-.62,10.16,1.69,13.49,1.12,1.65,2.47,3.46,4.25,3.4s2.34-1.09,4.38-1.09,2.64,1.09,4.42,1.05,3-1.65,4.12-3.3A14.48,14.48,0,0,0,37.33,39a6,6,0,0,1-3.59-5.44,6.1,6.1,0,0,1,2.9-5.11,6.33,6.33,0,0,0-4.91-2.67"></path><path d="M51,21.19a7.76,7.76,0,0,1,8.14,8.13,7.85,7.85,0,0,1-8.26,8.16H45.52v8.45H41.68V21.19ZM45.52,34.26h4.41c3.34,0,5.24-1.8,5.24-4.92s-1.9-4.91-5.23-4.91H45.52Z"></path><path d="M60.1,40.8c0-3.15,2.42-5.09,6.7-5.33l4.94-.29V33.79c0-2-1.35-3.2-3.62-3.2s-3.48,1-3.8,2.64h-3.5c.21-3.26,3-5.66,7.44-5.66s7.17,2.31,7.17,5.93V45.93H71.88V43h-.09a6.43,6.43,0,0,1-5.69,3.28C62.57,46.24,60.1,44,60.1,40.8Zm11.64-1.62V37.75L67.3,38c-2.21.15-3.46,1.13-3.46,2.67s1.3,2.61,3.29,2.61A4.32,4.32,0,0,0,71.74,39.18Z"></path><path d="M78.78,52.56v-3a6.68,6.68,0,0,0,1.2.07c1.71,0,2.64-.72,3.2-2.57,0,0,.33-1.1.33-1.11L77,27.9h4l4.57,14.67h.06L90.19,27.9H94.1l-6.75,19c-1.54,4.37-3.33,5.78-7.06,5.78A12.26,12.26,0,0,1,78.78,52.56Z"></path></g></svg>
+</button>
+<button type="button" class="xp" aria-label="PayPal" style="flex: 1 1 0; min-width: 0; height: 48px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; padding: 0; background: #FFC439; border: 0; border-radius: 8px; cursor: pointer;">
+<img src="assets/paypal.svg" alt="" style="width: 36px; height: 36px; object-fit: contain;">
+</button>
+<button type="button" class="xp" aria-label="Google Pay" title="Placeholder: replace with Google's own Google Pay button" style="flex: 1 1 0; min-width: 0; height: 48px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; padding: 0; background: #FFFFFF; border: 1px solid #E3E4DE; border-radius: 8px; cursor: pointer;">
+<svg height="42" viewBox="2 1.9 124.1 66.2" aria-hidden="true" style="display: block;"><g id="G_Pay_Lockup_1_">
+<g id="Pay_Typeface_3_">
+<path id="Letter_p_3_" d="M61.2,37.2v10H58V22.6h8.4c2.1,0,3.9,0.7,5.4,2.1c1.5,1.4,2.3,3.2,2.3,5.2    c0,2.1-0.8,3.8-2.3,5.2c-1.5,1.4-3.3,2.1-5.4,2.1L61.2,37.2L61.2,37.2z M61.2,25.6v8.6h5.3c1.3,0,2.3-0.4,3.1-1.3    c0.8-0.8,1.3-1.9,1.3-3c0-1.1-0.4-2.1-1.3-3c-0.8-0.9-1.9-1.3-3.1-1.3L61.2,25.6L61.2,25.6z" fill="#3C4043"></path>
+<path id="Letter_a_3_" d="M82.4,29.8c2.3,0,4.2,0.6,5.5,1.9c1.4,1.3,2,3,2,5.1v10.4h-3v-2.3h-0.1    c-1.3,1.9-3.1,2.9-5.2,2.9c-1.9,0-3.4-0.5-4.7-1.7C75.6,45,75,43.6,75,42c0-1.7,0.7-3.1,2-4.2c1.3-1,3.1-1.6,5.3-1.6    c1.9,0,3.4,0.3,4.6,1v-0.7c0-1.1-0.4-2-1.3-2.8c-0.9-0.8-1.9-1.2-3.1-1.2c-1.8,0-3.2,0.7-4.2,2.2l-2.8-1.7    C77.1,30.9,79.4,29.8,82.4,29.8z M78.3,42c0,0.8,0.3,1.5,1.1,2.1c0.7,0.5,1.5,0.8,2.5,0.8c1.3,0,2.5-0.5,3.6-1.5s1.6-2.1,1.6-3.5    c-1-0.8-2.4-1.2-4.1-1.2c-1.3,0-2.4,0.3-3.2,0.9C78.7,40.3,78.3,41.1,78.3,42z" fill="#3C4043"></path>
+<path id="Letter_y_3_" d="M107.2,30.3L96.6,54.6h-3.3l3.9-8.5l-7-15.8h3.4l5,12.1h0.1l4.9-12.1H107.2z" fill="#3C4043"></path>
+</g>
+<g id="G_Mark_1_">
+<path id="Blue_500" d="M48.6,35.2c0-1-0.1-2-0.3-3H35v5.4l7.6,0c-0.3,1.8-1.3,3.4-2.8,4.4v3.5h4.6    C47,43.1,48.6,39.5,48.6,35.2z" fill="#4285F4"></path>
+<path id="Green_500_1_" d="M39.8,42.1c-1.3,0.9-2.9,1.4-4.8,1.4c-3.7,0-6.8-2.5-7.9-5.8h-4.7v3.6    C24.7,45.9,29.5,49,35,49c3.8,0,7-1.3,9.4-3.4L39.8,42.1z" fill="#34A853"></path>
+<path id="Yellow_500_1_" d="M26.6,34.9c0-0.9,0.2-1.8,0.4-2.7v-3.6h-4.7c-1,1.9-1.5,4.1-1.5,6.3    c0,2.3,0.5,4.4,1.5,6.3l4.7-3.6C26.8,36.7,26.6,35.8,26.6,34.9z" fill="#FABB05"></path>
+<path id="Red_500" d="M35,26.4c2.1,0,4,0.7,5.4,2.1l4-4c-2.5-2.3-5.6-3.7-9.5-3.7c-5.5,0-10.3,3.2-12.6,7.8l4.7,3.6    C28.2,28.8,31.3,26.4,35,26.4z" fill="#E94235"></path>
+</g>
+</g>
+</svg>
+</button>
+</div>
+<div style="display: flex; align-items: center; gap: 14px; color: #707070; font-size: 13px; font-weight: 500; letter-spacing: -0.02em;"><span style="flex-grow: 1; height: 1px; background: #DEDEDE;"></span><span>OR</span><span style="flex-grow: 1; height: 1px; background: #DEDEDE;"></span></div>
+</div>
 
-      <div style="display:flex; flex-direction:column; gap:10px;">
-        <h2 class="order-heading">Complete your payment</h2>
-        <div class="order-meta-info">
-          <div class="order-meta-row"><span>Date</span><span id="order-date"></span></div>
-          <div class="order-meta-row"><span>Order reference</span><span id="order-ref" style="font-weight:600; color:#20221F;"></span></div>
-          <!-- Bancontact guideline: the payment page header must show the beneficiary -->
-          <div class="order-meta-row" id="row-beneficiary" hidden><span>Beneficiary</span><span id="order-beneficiary" style="font-weight:600; color:#20221F;"></span></div>
-        </div>
-      </div>
 
-      <div style="display:flex; flex-direction:column; gap:12px;">
-        <div class="price-display">
-          <span class="price-amount" id="order-amount"></span>
-          <span class="price-currency" id="order-currency">EUR</span>
-        </div>
-        <span class="items-desc" id="order-items"></span>
-      </div>
-    </section>
 
-    <!-- RIGHT COLUMN: payment panes -->
-    <section class="col-payment">
+<section aria-labelledby="h-pay" style="display: flex; flex-direction: column; gap: 14px;">
+<div style="display: flex; flex-direction: column; gap: 4px;"><h2 id="h-pay" style="margin: 0; font-size: 20px; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em;">Payment</h2><span style="font-size: 14px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #707070;">All transactions are secure and encrypted.</span></div>
+<div role="radiogroup" aria-label="Payment method" style="border: 1px solid #DEDEDE; border-radius: 12px; overflow: hidden; background: #FFFFFF;">
+<div style="">
+<button type="button" class="pmrow" role="radio" aria-checked="false" data-method="card"  style="width: 100%; box-sizing: border-box; display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 14px; background: #FFFFFF; border: 0; font-family: inherit; text-align: left; color: #000000; cursor: pointer;">
+<span style="width: 18px; height: 18px; box-sizing: border-box; flex-shrink: 0; border-radius: 9px; background: #FFFFFF; border: 1px solid #C9CBC5;"></span>
+<span style="flex-grow: 1; min-width: 0; font-size: 14px; line-height: 1.35; font-weight: 600; letter-spacing: -0.02em;">Credit or debit card</span>
+<span style="display: flex; flex-direction: row; gap: 4px; flex-shrink: 0;"><span style="width: 40px; height: 28px; box-sizing: border-box; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #FFFFFF; border: 1px solid #E3E4DE; display: flex; align-items: center; justify-content: center;"><img src="assets/visa.svg" alt="" style="width: 22px; height: 22px; object-fit: contain; display: block;"></span><span style="width: 40px; height: 28px; box-sizing: border-box; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #FFFFFF; border: 1px solid #E3E4DE; display: flex; align-items: center; justify-content: center;"><img src="assets/mastercard.svg" alt="" style="width: 22px; height: 22px; object-fit: contain; display: block;"></span><span style="width: 40px; height: 28px; box-sizing: border-box; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #FFFFFF; border: 1px solid #E3E4DE; display: flex; align-items: center; justify-content: center;"><img src="assets/americanexpress.svg" alt="" style="width: 22px; height: 22px; object-fit: contain; display: block;"></span></span>
+</button>
+<div class="pm-detail" id="pm-detail-card" style="display:none; box-sizing: border-box; padding: 14px; background: #F7F7F7; border-top: 1px solid #DEDEDE;"><div style="display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<label for="cc-number" style="font-size: 13px; font-weight: 500; letter-spacing: -0.02em; color: #666666;">Card number</label>
+<input id="cc-number" class="fld" type="text" inputmode="numeric" autocomplete="cc-number" placeholder="1234 5678 9012 3456">
+<span id="cc-number-err" style="display:none; font-size: 12px; font-weight: 500; color: #B12D2D;">Check your card number and try again.</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<label for="cc-name" style="font-size: 13px; font-weight: 500; letter-spacing: -0.02em; color: #666666;">Name on card</label>
+<input id="cc-name" class="fld" type="text" autocomplete="cc-name" placeholder="Full name">
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<label for="cc-exp" style="font-size: 13px; font-weight: 500; letter-spacing: -0.02em; color: #666666;">Expiry date</label>
+<input id="cc-exp" class="fld" type="text" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/YY">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<label for="cc-cvc" style="font-size: 13px; font-weight: 500; letter-spacing: -0.02em; color: #666666;">Security code</label>
+<input id="cc-cvc" class="fld" type="text" inputmode="numeric" autocomplete="cc-csc" placeholder="3 digits">
+</div>
+</div>
+<span id="cc-exp-err" style="display:none; font-size: 12px; font-weight: 500; color: #B12D2D;">This card has expired or the date is not valid.</span>
+</div></div>
+</div>
+<div style="border-top: 1px solid #DEDEDE;">
+<button type="button" class="pmrow" role="radio" aria-checked="false" data-method="pbb"  style="width: 100%; box-sizing: border-box; display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 14px; background: #FFFFFF; border: 0; font-family: inherit; text-align: left; color: #000000; cursor: pointer;">
+<span style="width: 18px; height: 18px; box-sizing: border-box; flex-shrink: 0; border-radius: 9px; background: #FFFFFF; border: 1px solid #C9CBC5;"></span>
+<span style="flex-grow: 1; min-width: 0; font-size: 14px; line-height: 1.35; font-weight: 600; letter-spacing: -0.02em;">Pay by bank</span>
+<span style="display: flex; flex-direction: row; gap: 4px; flex-shrink: 0;"><span style="width: 40px; height: 28px; box-sizing: border-box; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #F5F6F1; border: 0; display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3A3C37" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5L12 4l9 5.5M5 10v7M9.5 10v7M14.5 10v7M19 10v7M3.5 20h17"></path></svg></span></span>
+</button>
+<div class="pm-detail" id="pm-detail-pbb" style="display:none; box-sizing: border-box; padding: 14px; background: #F7F7F7; border-top: 1px solid #DEDEDE;"><span style="font-size: 14px; line-height: 1.5; font-weight: 500; letter-spacing: -0.02em; color: #3A3C37;">Choose your bank on the next step and approve the instant transfer in your banking app. No card surcharges.</span></div>
+</div>
+<div style="border-top: 1px solid #DEDEDE;">
+<button type="button" class="pmrow" role="radio" aria-checked="false" data-method="ideal"  style="width: 100%; box-sizing: border-box; display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 14px; background: #FFFFFF; border: 0; font-family: inherit; text-align: left; color: #000000; cursor: pointer;">
+<span style="width: 18px; height: 18px; box-sizing: border-box; flex-shrink: 0; border-radius: 9px; background: #FFFFFF; border: 1px solid #C9CBC5;"></span>
+<span style="flex-grow: 1; min-width: 0; font-size: 14px; line-height: 1.35; font-weight: 600; letter-spacing: -0.02em;">iDEAL</span>
+<span style="display: flex; flex-direction: row; gap: 4px; flex-shrink: 0;"><span style="width: 40px; height: 28px; box-sizing: border-box; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #FFFFFF; border: 0; display: flex; align-items: center; justify-content: center;"><img src="assets/ideal.svg" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block;"></span></span>
+</button>
+<div class="pm-detail" id="pm-detail-ideal" style="display:none; box-sizing: border-box; padding: 14px; background: #F7F7F7; border-top: 1px solid #DEDEDE;"><span style="font-size: 14px; line-height: 1.5; font-weight: 500; letter-spacing: -0.02em; color: #3A3C37;">You will be redirected to iDEAL to complete your purchase.</span></div>
+</div>
+<div style="border-top: 1px solid #DEDEDE;">
+<button type="button" class="pmrow" role="radio" aria-checked="false" data-method="wero"  style="width: 100%; box-sizing: border-box; display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 14px; background: #FFFFFF; border: 0; font-family: inherit; text-align: left; color: #000000; cursor: pointer;">
+<span style="width: 18px; height: 18px; box-sizing: border-box; flex-shrink: 0; border-radius: 9px; background: #FFFFFF; border: 1px solid #C9CBC5;"></span>
+<span style="flex-grow: 1; min-width: 0; font-size: 14px; line-height: 1.35; font-weight: 600; letter-spacing: -0.02em;">Wero</span>
+<span style="display: flex; flex-direction: row; gap: 4px; flex-shrink: 0;"><span style="width: 40px; height: 28px; box-sizing: border-box; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #FFF48D; border: 0; display: flex; align-items: center; justify-content: center;"><img src="assets/wero.png" alt="" style="width: 24px; height: 24px; object-fit: contain; display: block;"></span></span>
+</button>
+<div class="pm-detail" id="pm-detail-wero" style="display:none; box-sizing: border-box; padding: 14px; background: #F7F7F7; border-top: 1px solid #DEDEDE;"><span style="font-size: 14px; line-height: 1.5; font-weight: 500; letter-spacing: -0.02em; color: #3A3C37;">Pay directly from your bank account with the Wero app.</span></div>
+</div>
+<div style="border-top: 1px solid #DEDEDE;">
+<button type="button" class="pmrow" role="radio" aria-checked="false" data-method="bancontact"  style="width: 100%; box-sizing: border-box; display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 14px; background: #FFFFFF; border: 0; font-family: inherit; text-align: left; color: #000000; cursor: pointer;">
+<span style="width: 18px; height: 18px; box-sizing: border-box; flex-shrink: 0; border-radius: 9px; background: #FFFFFF; border: 1px solid #C9CBC5;"></span>
+<span style="flex-grow: 1; min-width: 0; font-size: 14px; line-height: 1.35; font-weight: 600; letter-spacing: -0.02em;">Bancontact</span>
+<span style="display: flex; flex-direction: row; gap: 4px; flex-shrink: 0;"><span style="width: 40px; height: 28px; box-sizing: border-box; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #FFFFFF; border: 1px solid #E3E4DE; display: flex; align-items: center; justify-content: center;"><img src="assets/bancontact-OLD-replace-by-2026-12-31.svg" alt="" style="width: 24px; height: 24px; object-fit: contain; display: block;"></span></span>
+</button>
+<div class="pm-detail" id="pm-detail-bancontact" style="display:none; box-sizing: border-box; padding: 14px; background: #F7F7F7; border-top: 1px solid #DEDEDE;"><span style="font-size: 14px; line-height: 1.5; font-weight: 500; letter-spacing: -0.02em; color: #3A3C37;">Pay with your Bancontact Pay app, your banking app supporting Bancontact payments or Bancontact Card. You will see a QR code and a card form on the next step.</span></div>
+</div>
+<div style="border-top: 1px solid #DEDEDE;">
+<button type="button" class="pmrow" role="radio" aria-checked="false" data-method="klarna"  style="width: 100%; box-sizing: border-box; display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 14px; background: #FFFFFF; border: 0; font-family: inherit; text-align: left; color: #000000; cursor: pointer;">
+<span style="width: 18px; height: 18px; box-sizing: border-box; flex-shrink: 0; border-radius: 9px; background: #FFFFFF; border: 1px solid #C9CBC5;"></span>
+<span style="flex-grow: 1; min-width: 0; font-size: 14px; line-height: 1.35; font-weight: 600; letter-spacing: -0.02em;">Klarna</span>
+<span style="display: flex; flex-direction: row; gap: 4px; flex-shrink: 0;"><span style="width: 40px; height: 28px; box-sizing: border-box; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #FFB3C7; border: 0; display: flex; align-items: center; justify-content: center;"><img src="assets/klarna.svg" alt="" style="width: 24px; height: 24px; object-fit: contain; display: block;"></span></span>
+</button>
+<div class="pm-detail" id="pm-detail-klarna" style="display:none; box-sizing: border-box; padding: 14px; background: #F7F7F7; border-top: 1px solid #DEDEDE;"><span style="font-size: 14px; line-height: 1.5; font-weight: 500; letter-spacing: -0.02em; color: #3A3C37;">Pay now or pay later with Klarna.</span></div>
+</div>
+<div style="border-top: 1px solid #DEDEDE;">
+<button type="button" class="pmrow" role="radio" aria-checked="false" data-method="sofort"  style="width: 100%; box-sizing: border-box; display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 14px; background: #FFFFFF; border: 0; font-family: inherit; text-align: left; color: #000000; cursor: pointer;">
+<span style="width: 18px; height: 18px; box-sizing: border-box; flex-shrink: 0; border-radius: 9px; background: #FFFFFF; border: 1px solid #C9CBC5;"></span>
+<span style="flex-grow: 1; min-width: 0; font-size: 14px; line-height: 1.35; font-weight: 600; letter-spacing: -0.02em;">Sofort</span>
+<span style="display: flex; flex-direction: row; gap: 4px; flex-shrink: 0;"><span style="width: 40px; height: 28px; box-sizing: border-box; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #FFFFFF; border: 1px solid #E3E4DE; display: flex; align-items: center; justify-content: center;"><img src="assets/sofort.svg" alt="" style="width: 22px; height: 22px; object-fit: contain; display: block;"></span></span>
+</button>
+<div class="pm-detail" id="pm-detail-sofort" style="display:none; box-sizing: border-box; padding: 14px; background: #F7F7F7; border-top: 1px solid #DEDEDE;"><span style="font-size: 14px; line-height: 1.5; font-weight: 500; letter-spacing: -0.02em; color: #3A3C37;">Instant online bank transfer. You will be redirected to complete your payment.</span></div>
+</div>
+<div style="border-top: 1px solid #DEDEDE;">
+<button type="button" class="pmrow" role="radio" aria-checked="false" data-method="riverty"  style="width: 100%; box-sizing: border-box; display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 14px; background: #FFFFFF; border: 0; font-family: inherit; text-align: left; color: #000000; cursor: pointer;">
+<span style="width: 18px; height: 18px; box-sizing: border-box; flex-shrink: 0; border-radius: 9px; background: #FFFFFF; border: 1px solid #C9CBC5;"></span>
+<span style="flex-grow: 1; min-width: 0; font-size: 14px; line-height: 1.35; font-weight: 600; letter-spacing: -0.02em;">Riverty</span>
+<span style="display: flex; flex-direction: row; gap: 4px; flex-shrink: 0;"><span style="width: 40px; height: 28px; box-sizing: border-box; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #FFFFFF; border: 1px solid #E3E4DE; display: flex; align-items: center; justify-content: center;"><img src="assets/riverty.svg" alt="" style="width: 24px; height: 24px; object-fit: contain; display: block;"></span></span>
+</button>
+<div class="pm-detail" id="pm-detail-riverty" style="display:none; box-sizing: border-box; padding: 14px; background: #F7F7F7; border-top: 1px solid #DEDEDE;"><span style="font-size: 14px; line-height: 1.5; font-weight: 500; letter-spacing: -0.02em; color: #3A3C37;">Buy now, pay later. You will be redirected to Riverty.</span></div>
+</div>
+<div style="border-top: 1px solid #DEDEDE;">
+<button type="button" class="pmrow" role="radio" aria-checked="false" data-method="billink"  style="width: 100%; box-sizing: border-box; display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 14px; background: #FFFFFF; border: 0; font-family: inherit; text-align: left; color: #000000; cursor: pointer;">
+<span style="width: 18px; height: 18px; box-sizing: border-box; flex-shrink: 0; border-radius: 9px; background: #FFFFFF; border: 1px solid #C9CBC5;"></span>
+<span style="flex-grow: 1; min-width: 0; font-size: 14px; line-height: 1.35; font-weight: 600; letter-spacing: -0.02em;">Billink</span>
+<span style="display: flex; flex-direction: row; gap: 4px; flex-shrink: 0;"><span style="width: 40px; height: 28px; box-sizing: border-box; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #FFFFFF; border: 1px solid #E3E4DE; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #797C74;">Logo</span></span></span>
+</button>
+<div class="pm-detail" id="pm-detail-billink" style="display:none; box-sizing: border-box; padding: 14px; background: #F7F7F7; border-top: 1px solid #DEDEDE;"><span style="font-size: 14px; line-height: 1.5; font-weight: 500; letter-spacing: -0.02em; color: #3A3C37;">Receive your order and pay later by invoice.</span></div>
+</div>
+<div style="border-top: 1px solid #DEDEDE;">
+<button type="button" class="pmrow" role="radio" aria-checked="false" data-method="eps"  style="width: 100%; box-sizing: border-box; display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 14px; background: #FFFFFF; border: 0; font-family: inherit; text-align: left; color: #000000; cursor: pointer;">
+<span style="width: 18px; height: 18px; box-sizing: border-box; flex-shrink: 0; border-radius: 9px; background: #FFFFFF; border: 1px solid #C9CBC5;"></span>
+<span style="flex-grow: 1; min-width: 0; font-size: 14px; line-height: 1.35; font-weight: 600; letter-spacing: -0.02em;">EPS</span>
+<span style="display: flex; flex-direction: row; gap: 4px; flex-shrink: 0;"><span style="width: 40px; height: 28px; box-sizing: border-box; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #FFFFFF; border: 1px solid #E3E4DE; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #797C74;">Logo</span></span></span>
+</button>
+<div class="pm-detail" id="pm-detail-eps" style="display:none; box-sizing: border-box; padding: 14px; background: #F7F7F7; border-top: 1px solid #DEDEDE;"><span style="font-size: 14px; line-height: 1.5; font-weight: 500; letter-spacing: -0.02em; color: #3A3C37;">Pay with your Austrian bank. You will be redirected to complete your payment.</span></div>
+</div>
+<div style="border-top: 1px solid #DEDEDE;">
+<button type="button" class="pmrow" role="radio" aria-checked="false" data-method="p24"  style="width: 100%; box-sizing: border-box; display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 14px; background: #FFFFFF; border: 0; font-family: inherit; text-align: left; color: #000000; cursor: pointer;">
+<span style="width: 18px; height: 18px; box-sizing: border-box; flex-shrink: 0; border-radius: 9px; background: #FFFFFF; border: 1px solid #C9CBC5;"></span>
+<span style="flex-grow: 1; min-width: 0; font-size: 14px; line-height: 1.35; font-weight: 600; letter-spacing: -0.02em;">Przelewy24</span>
+<span style="display: flex; flex-direction: row; gap: 4px; flex-shrink: 0;"><span style="width: 40px; height: 28px; box-sizing: border-box; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #FFFFFF; border: 1px solid #E3E4DE; display: flex; align-items: center; justify-content: center;"><img src="assets/przelewy24.svg" alt="" style="width: 24px; height: 24px; object-fit: contain; display: block;"></span></span>
+</button>
+<div class="pm-detail" id="pm-detail-p24" style="display:none; box-sizing: border-box; padding: 14px; background: #F7F7F7; border-top: 1px solid #DEDEDE;"><span style="font-size: 14px; line-height: 1.5; font-weight: 500; letter-spacing: -0.02em; color: #3A3C37;">Online payments in Poland. You will be redirected to Przelewy24.</span></div>
+</div>
+<div style="border-top: 1px solid #DEDEDE;">
+<button type="button" class="pmrow" role="radio" aria-checked="false" data-method="multibanco"  style="width: 100%; box-sizing: border-box; display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 14px; background: #FFFFFF; border: 0; font-family: inherit; text-align: left; color: #000000; cursor: pointer;">
+<span style="width: 18px; height: 18px; box-sizing: border-box; flex-shrink: 0; border-radius: 9px; background: #FFFFFF; border: 1px solid #C9CBC5;"></span>
+<span style="flex-grow: 1; min-width: 0; font-size: 14px; line-height: 1.35; font-weight: 600; letter-spacing: -0.02em;">Multibanco</span>
+<span style="display: flex; flex-direction: row; gap: 4px; flex-shrink: 0;"><span style="width: 40px; height: 28px; box-sizing: border-box; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #FFFFFF; border: 1px solid #E3E4DE; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #797C74;">Logo</span></span></span>
+</button>
+<div class="pm-detail" id="pm-detail-multibanco" style="display:none; box-sizing: border-box; padding: 14px; background: #F7F7F7; border-top: 1px solid #DEDEDE;"><span style="font-size: 14px; line-height: 1.5; font-weight: 500; letter-spacing: -0.02em; color: #3A3C37;">You will receive a payment reference to pay at an ATM or in your banking app.</span></div>
+</div>
+<div style="border-top: 1px solid #DEDEDE;">
+<button type="button" class="pmrow" role="radio" aria-checked="false" data-method="paysafecard"  style="width: 100%; box-sizing: border-box; display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 14px; background: #FFFFFF; border: 0; font-family: inherit; text-align: left; color: #000000; cursor: pointer;">
+<span style="width: 18px; height: 18px; box-sizing: border-box; flex-shrink: 0; border-radius: 9px; background: #FFFFFF; border: 1px solid #C9CBC5;"></span>
+<span style="flex-grow: 1; min-width: 0; font-size: 14px; line-height: 1.35; font-weight: 600; letter-spacing: -0.02em;">Paysafecard</span>
+<span style="display: flex; flex-direction: row; gap: 4px; flex-shrink: 0;"><span style="width: 40px; height: 28px; box-sizing: border-box; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #FFFFFF; border: 1px solid #E3E4DE; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #797C74;">Logo</span></span></span>
+</button>
+<div class="pm-detail" id="pm-detail-paysafecard" style="display:none; box-sizing: border-box; padding: 14px; background: #F7F7F7; border-top: 1px solid #DEDEDE;"><span style="font-size: 14px; line-height: 1.5; font-weight: 500; letter-spacing: -0.02em; color: #3A3C37;">Pay with a prepaid code. You will be redirected to Paysafecard.</span></div>
+</div>
+</div>
+</section>
 
-      <!-- PANE: payment methods -->
-      <div class="pane active" id="pane-methods">
-        <span class="xp-label">Express checkout</span>
-        <div class="xp-row">
-          <button type="button" class="xp-btn xp-apple" data-express="Apple Pay" aria-label="Pay with Apple Pay">
-            <svg height="38" viewBox="0 0 109 70" aria-hidden="true" style="display:block;"><g fill="#FFFFFF"><path d="M30.36,23.61a6.09,6.09,0,0,0,1.39-4.3,6,6,0,0,0-4,2.05,5.63,5.63,0,0,0-1.42,4.13,5,5,0,0,0,4-1.88"></path><path d="M31.73,25.79C29.52,25.66,27.64,27,26.59,27s-2.67-1.18-4.42-1.15a6.53,6.53,0,0,0-5.54,3.36c-2.37,4.09-.62,10.16,1.69,13.49,1.12,1.65,2.47,3.46,4.25,3.4s2.34-1.09,4.38-1.09,2.64,1.09,4.42,1.05,3-1.65,4.12-3.3A14.48,14.48,0,0,0,37.33,39a6,6,0,0,1-3.59-5.44,6.1,6.1,0,0,1,2.9-5.11,6.33,6.33,0,0,0-4.91-2.67"></path><path d="M51,21.19a7.76,7.76,0,0,1,8.14,8.13,7.85,7.85,0,0,1-8.26,8.16H45.52v8.45H41.68V21.19ZM45.52,34.26h4.41c3.34,0,5.24-1.8,5.24-4.92s-1.9-4.91-5.23-4.91H45.52Z"></path><path d="M60.1,40.8c0-3.15,2.42-5.09,6.7-5.33l4.94-.29V33.79c0-2-1.35-3.2-3.62-3.2s-3.48,1-3.8,2.64h-3.5c.21-3.26,3-5.66,7.44-5.66s7.17,2.31,7.17,5.93V45.93H71.88V43h-.09a6.43,6.43,0,0,1-5.69,3.28C62.57,46.24,60.1,44,60.1,40.8Zm11.64-1.62V37.75L67.3,38c-2.21.15-3.46,1.13-3.46,2.67s1.3,2.61,3.29,2.61A4.32,4.32,0,0,0,71.74,39.18Z"></path><path d="M78.78,52.56v-3a6.68,6.68,0,0,0,1.2.07c1.71,0,2.64-.72,3.2-2.57,0,0,.33-1.1.33-1.11L77,27.9h4l4.57,14.67h.06L90.19,27.9H94.1l-6.75,19c-1.54,4.37-3.33,5.78-7.06,5.78A12.26,12.26,0,0,1,78.78,52.56Z"></path></g></svg>
-          </button>
-          <button type="button" class="xp-btn xp-paypal" data-express="PayPal" aria-label="Pay with PayPal">
-            <svg height="26" viewBox="0 0 100 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <text x="50" y="22" text-anchor="middle" font-family="'Inter', sans-serif" font-size="20" font-weight="800" font-style="italic" fill="#003087">Pay<tspan fill="#0079C1">Pal</tspan></text>
-            </svg>
-          </button>
-          <button type="button" class="xp-btn xp-gpay" data-express="Google Pay" aria-label="Pay with Google Pay">
-            <svg height="38" viewBox="2 1.9 124.1 66.2" aria-hidden="true" style="display:block;"><g>
-              <path d="M61.2,37.2v10H58V22.6h8.4c2.1,0,3.9,0.7,5.4,2.1c1.5,1.4,2.3,3.2,2.3,5.2c0,2.1-0.8,3.8-2.3,5.2c-1.5,1.4-3.3,2.1-5.4,2.1L61.2,37.2L61.2,37.2z M61.2,25.6v8.6h5.3c1.3,0,2.3-0.4,3.1-1.3c0.8-0.8,1.3-1.9,1.3-3c0-1.1-0.4-2.1-1.3-3c-0.8-0.9-1.9-1.3-3.1-1.3L61.2,25.6L61.2,25.6z" fill="#3C4043"></path>
-              <path d="M82.4,29.8c2.3,0,4.2,0.6,5.5,1.9c1.4,1.3,2,3,2,5.1v10.4h-3v-2.3h-0.1c-1.3,1.9-3.1,2.9-5.2,2.9c-1.9,0-3.4-0.5-4.7-1.7C75.6,45,75,43.6,75,42c0-1.7,0.7-3.1,2-4.2c1.3-1,3.1-1.6,5.3-1.6c1.9,0,3.4,0.3,4.6,1v-0.7c0-1.1-0.4-2-1.3-2.8c-0.9-0.8-1.9-1.2-3.1-1.2c-1.8,0-3.2,0.7-4.2,2.2l-2.8-1.7C77.1,30.9,79.4,29.8,82.4,29.8z M78.3,42c0,0.8,0.3,1.5,1.1,2.1c0.7,0.5,1.5,0.8,2.5,0.8c1.3,0,2.5-0.5,3.6-1.5s1.6-2.1,1.6-3.5c-1-0.8-2.4-1.2-4.1-1.2c-1.3,0-2.4,0.3-3.2,0.9C78.7,40.3,78.3,41.1,78.3,42z" fill="#3C4043"></path>
-              <path d="M107.2,30.3L96.6,54.6h-3.3l3.9-8.5l-7-15.8h3.4l5,12.1h0.1l4.9-12.1H107.2z" fill="#3C4043"></path>
-              <path d="M48.6,35.2c0-1-0.1-2-0.3-3H35v5.4l7.6,0c-0.3,1.8-1.3,3.4-2.8,4.4v3.5h4.6C47,43.1,48.6,39.5,48.6,35.2z" fill="#4285F4"></path>
-              <path d="M39.8,42.1c-1.3,0.9-2.9,1.4-4.8,1.4c-3.7,0-6.8-2.5-7.9-5.8h-4.7v3.6C24.7,45.9,29.5,49,35,49c3.8,0,7-1.3,9.4-3.4L39.8,42.1z" fill="#34A853"></path>
-              <path d="M26.6,34.9c0-0.9,0.2-1.8,0.4-2.7v-3.6h-4.7c-1,1.9-1.5,4.1-1.5,6.3c0,2.3,0.5,4.4,1.5,6.3l4.7-3.6C26.8,36.7,26.6,35.8,26.6,34.9z" fill="#FABB05"></path>
-              <path d="M35,26.4c2.1,0,4,0.7,5.4,2.1l4-4c-2.5-2.3-5.6-3.7-9.5-3.7c-5.5,0-10.3,3.2-12.6,7.8l4.7,3.6C28.2,28.8,31.3,26.4,35,26.4z" fill="#E94235"></path>
-            </g></svg>
-          </button>
-        </div>
+<div style="display: flex; flex-direction: column; gap: 16px;">
+<button type="button" class="paybtn" disabled id="btn-main-pay" style="width: 100%; height: 50px; box-sizing: border-box; border: 0; border-radius: 12px; background: #191B18; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; opacity: 0.4; cursor: not-allowed;">Pay €120.00</button>
+</div>
 
-        <div class="divider-row">
-          <span class="divider-line"></span>
-          <span>or choose a payment method</span>
-          <span class="divider-line"></span>
-        </div>
-
-        <span class="methods-avail-count" id="methods-count"></span>
-        <div class="plist" id="plist" role="group" aria-label="Payment methods, scrollable list" tabindex="0"></div>
-        <div role="status" aria-live="polite" class="status-notice" id="method-status"></div>
-      </div>
-
-      <!-- PANE: credit / debit card with live card preview -->
-      <div class="pane" id="pane-card">
-        <button type="button" class="back-to-methods-btn" id="btn-back-card">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
-          <span>Choose another payment method</span>
-        </button>
-        <div class="cc-scene" aria-hidden="true">
-          <div class="cc-flip" id="cc-flip" data-brand="">
-            <div class="cc-face cc-front">
-              <div class="cc-top">
-                <svg width="44" height="32" viewBox="0 0 44 32" aria-hidden="true"><rect width="44" height="32" rx="6" fill="#E8C96A"></rect><path d="M0 11h44M0 21h44M15 0v32M29 0v32" stroke="#B8963B" stroke-width="1.5" fill="none"></path><rect x="15" y="11" width="14" height="10" rx="2" fill="#E8C96A" stroke="#B8963B" stroke-width="1.5"></rect></svg>
-                <span class="cc-brand"><img id="cc-brand-img" src="" alt=""></span>
-              </div>
-              <div class="cc-num cc-dim" id="cc-num"></div>
-              <div class="cc-row">
-                <div class="cc-cell" id="cc-cell-name">
-                  <div class="cc-cap">CARDHOLDER</div>
-                  <div class="cc-val cc-dim" id="cc-name">YOUR NAME</div>
-                </div>
-                <div class="cc-cell exp" id="cc-cell-exp">
-                  <div class="cc-cap">EXPIRES</div>
-                  <div class="cc-val cc-dim" id="cc-exp">MM/YY</div>
-                </div>
-              </div>
-            </div>
-            <div class="cc-face cc-back">
-              <div class="cc-strip"></div>
-              <div class="cc-cvc-wrap">
-                <div class="cc-cap">SECURITY CODE</div>
-                <div class="cc-cvc" id="cc-cvc"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <form class="card-form" id="card-form" novalidate autocomplete="on">
-          <div class="field">
-            <label class="field-label" for="cc-number">Card number</label>
-            <input class="fld" id="cc-number" type="text" inputmode="numeric" autocomplete="cc-number" placeholder="1234 5678 9012 3456">
-            <span class="field-error" id="cc-number-err" hidden>Check your card number and try again.</span>
-          </div>
-          <div class="field">
-            <label class="field-label" for="cc-name-in">Name on card</label>
-            <input class="fld" id="cc-name-in" type="text" autocomplete="cc-name" placeholder="Full name">
-          </div>
-          <div class="form-grid-2">
-            <div class="field">
-              <label class="field-label" for="cc-exp-in">Expiry date</label>
-              <input class="fld" id="cc-exp-in" type="text" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/YY">
-            </div>
-            <div class="field">
-              <label class="field-label" for="cc-cvc-in">Security code</label>
-              <input class="fld" id="cc-cvc-in" type="text" inputmode="numeric" autocomplete="cc-csc" placeholder="3 digits">
-            </div>
-          </div>
-          <span class="field-error" id="cc-exp-err" hidden>This card has expired or the date is not valid.</span>
-          <button type="submit" class="btn-pay-action" id="btn-card-pay" disabled>Pay</button>
-        </form>
-      </div>
-
-      <!-- PANE: Bancontact (QR + card, one above the other) -->
-      <div class="pane" id="pane-bancontact">
-        <button type="button" class="back-to-methods-btn" id="btn-back-bancontact">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
-          <span>Choose another payment method</span>
-        </button>
-        <div class="bc-section" role="group" aria-label="Bancontact Pay">
-          <div class="bc-head">
-            <span class="bc-logo"><img src="assets/bancontact.svg" alt=""></span>
-            <div style="display:flex; flex-direction:column; gap:1px;">
-              <h3 class="bc-title">Bancontact Pay</h3>
-              <span class="bc-tagline">Pay with your Bancontact Pay app or your banking app supporting Bancontact payments</span>
-            </div>
-          </div>
-          <div class="bc-qr-card">
-            <div class="bc-qr" id="bc-qr" role="img" aria-label="Bancontact Pay QR code"></div>
-            <div style="display:flex; flex-direction:column; gap:10px; min-width:0;">
-              <ol class="bc-steps">
-                <li>Open the Bancontact Pay app or your banking app</li>
-                <li>Scan this code</li>
-                <li>Confirm the payment on your phone</li>
-              </ol>
-              <div class="bc-wait"><span class="bc-pulse"></span><span>Waiting for your payment</span></div>
-            </div>
-          </div>
-          <div class="sim-box" id="bc-sim-box">
-            <div style="font-size:11px; font-weight:700; color:#6B7280; text-transform:uppercase;">Sandbox verification</div>
-            <button type="button" class="sim-btn" id="btn-bc-simulate">⚡ Simulate Bancontact Pay approval</button>
-          </div>
-        </div>
-
-        <div class="bc-or"><span class="line"></span><span>or pay with your Bancontact card</span><span class="line"></span></div>
-
-        <div class="bc-section" role="group" aria-label="Bancontact Card">
-          <div class="bc-head">
-            <span class="bc-logo"><img src="assets/bancontact.svg" alt=""></span>
-            <div style="display:flex; flex-direction:column; gap:1px;">
-              <h3 class="bc-title">Bancontact Card</h3>
-              <span class="bc-tagline">Pay with your Bancontact card</span>
-            </div>
-          </div>
-          <form class="card-form" id="bc-form" novalidate autocomplete="on">
-            <div class="field">
-              <label class="field-label" for="bc-number">Card number</label>
-              <input class="fld" id="bc-number" type="text" inputmode="numeric" autocomplete="cc-number" placeholder="6703 0000 0000 0000">
-              <span class="field-error" id="bc-number-err" hidden>Check your card number and try again.</span>
-            </div>
-            <div class="field">
-              <label class="field-label" for="bc-exp">Expiry date</label>
-              <input class="fld" id="bc-exp" type="text" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/YY">
-            </div>
-            <span class="field-error" id="bc-exp-err" hidden>This card has expired or the date is not valid.</span>
-            <button type="submit" class="btn-pay-action" id="btn-bc-pay" disabled>Pay</button>
-          </form>
-        </div>
-      </div>
-
-      <!-- PANE: Wero QR Code & Mobile Approval (EPI European Payments Initiative) -->
-      <div class="pane pane-handoff" id="pane-wero">
-        <button type="button" class="back-to-methods-btn" id="btn-back-wero">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
-          <span>Choose another payment method</span>
-        </button>
-
-        <div style="display:flex; align-items:center; gap:14px; width:100%; border-bottom:1px solid #E3E4DE; padding-bottom:14px;">
-          <div style="width:48px; height:48px; border-radius:12px; background:#FFF48D; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-            <img src="assets/wero.png" alt="Wero" style="width:34px; height:auto;">
-          </div>
-          <div style="min-width:0; flex-grow:1;">
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
-              <h3 class="pbb-title" style="font-size:18px;">Pay with Wero</h3>
-              <span class="pbb-dnb-badge" style="background:#EBF5FF; border-color:#BFDBFE; color:#1E40AF;">EPI P2M Standard</span>
-            </div>
-            <p class="pbb-sub" style="margin-top:2px;">European single immediate e-commerce payment</p>
-          </div>
-        </div>
-
-        <!-- Flow step status badge reflecting EPI Single Immediate lifecycle -->
-        <div class="radar-status" role="status" aria-live="polite" id="wero-lifecycle-badge">
-          <span class="dot-blink" style="background:#2563EB;"></span>
-          <span id="wero-lifecycle-text">Step 1/4: Waiting for Consent QR scan in Wero wallet...</span>
-        </div>
-
-        <div class="pbb-qr-wrapper" id="wero-qr-box" style="border: 2px solid #20221F; position:relative;"></div>
-
-        <!-- Telemetry & EPI Resource Context -->
-        <div style="width:100%; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:10px 14px; font-size:11.5px; line-height:1.5; color:#475569; display:flex; flex-direction:column; gap:4px;">
-          <div style="display:flex; justify-content:space-between;"><span style="color:#64748B;">EPI Consent ID:</span><span style="font-family:monospace; font-weight:600; color:#0F172A;" id="wero-consent-id"></span></div>
-          <div style="display:flex; justify-content:space-between;"><span style="color:#64748B;">Acceptor (Merchant):</span><span style="font-weight:600; color:#0F172A;">Amnesia Ibiza (ES)</span></div>
-          <div style="display:flex; justify-content:space-between;"><span style="color:#64748B;">Settlement Rail:</span><span style="font-weight:600; color:#2563EB;">SEPA Instant (TIPS / RT1)</span></div>
-        </div>
-
-        <div style="text-align:center; max-width:330px;">
-          <p style="font-size:13px; font-weight:600; color:#20221F; margin:0 0 4px;">Scan with Wero or your European banking app</p>
-          <p style="font-size:12px; color:#797C74; margin:0; line-height:1.4;">Supported by BNP Paribas, BPCE, Crédit Agricole, ING, Rabobank, Deutsche Bank, Sparkassen, and more.</p>
-        </div>
-
-        <!-- Mobile deep link fallback (Variant B: m-commerce app-to-wallet) -->
-        <a href="https://wero-wallet.eu/pay/amnesia" target="_blank" rel="noopener noreferrer" id="wero-app-link" style="font-size:13px; font-weight:600; color:#0D314B; text-decoration:underline;">
-          Open Wero app on this device (M-commerce) ↗
-        </a>
-
-        <!-- Simulator Button for Instant Sandbox Verification -->
-        <div class="sim-box" id="wero-sim-box">
-          <div style="font-size:11px; font-weight:700; color:#6B7280; text-transform:uppercase;">EPI Sandbox Pipeline Verification</div>
-          <button type="button" class="sim-btn" id="btn-wero-simulate" style="background:#2563EB;">
-            ⚡ Simulate Step-by-Step EPI Flow (Consent → Auth → Capture → Settlement)
-          </button>
-        </div>
-      </div>
-
-      <!-- PANE: Pay by bank, bank selection -->
-      <div class="pane" id="pane-pbb-select">
-        <button type="button" class="back-to-methods-btn" id="btn-back-to-methods">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
-          <span>Choose another payment method</span>
-        </button>
-        <div class="pbb-header">
-          <div>
-            <h3 class="pbb-title">Pay by bank</h3>
-            <p class="pbb-sub">Instant transfer • No card surcharges • 100% encrypted</p>
-          </div>
-          <span class="pbb-dnb-badge">DNB Supervised</span>
-        </div>
-        <input type="search" class="pbb-search-field" id="pbb-search" placeholder="Search your bank (e.g. ING, Rabo, bunq)..." autocomplete="off" aria-label="Search your bank">
-        <div class="pbb-tabs">
-          <button type="button" class="pbb-tab active" data-country="all">All</button>
-          <button type="button" class="pbb-tab" data-country="NL">Netherlands</button>
-          <button type="button" class="pbb-tab" data-country="EU">Pan-European</button>
-        </div>
-        <div class="pbb-bank-list" id="pbb-bank-list" role="radiogroup" aria-label="Banks"></div>
-        <button type="button" class="btn-pay-action" id="btn-continue-pbb" disabled>
-          <span>Select your bank to continue</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        </button>
-      </div>
-
-      <!-- PANE: Pay by bank, SCA QR code & mobile approval -->
-      <div class="pane pane-handoff" id="pane-pbb-handoff">
-        <button type="button" class="back-to-methods-btn" id="btn-back-to-banks">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
-          <span>Change selected bank</span>
-        </button>
-        <div>
-          <h3 class="pbb-title" id="handoff-title" style="font-size:18px;">Authorize with ING Bank</h3>
-          <p class="pbb-sub" style="margin-top:2px;">Approve <strong id="handoff-amount"></strong> to <span id="handoff-merchant"></span></p>
-        </div>
-        <div class="radar-status" role="status" aria-live="polite">
-          <span class="dot-blink"></span>
-          <span>Waiting for mobile bank authorization...</span>
-        </div>
-        <div class="pbb-qr-wrapper" id="pbb-qr-box"></div>
-        <p style="font-size:12.5px; color:#797C74; margin:0 0 4px;">Scan with your phone camera or banking app to approve with Face ID / PIN.</p>
-        <a href="#" target="_blank" rel="noopener noreferrer" id="web-banking-link" style="font-size:13px; font-weight:600; color:#0D314B; text-decoration:underline;">Open online banking in new tab ↗</a>
-        <div class="sim-box">
-          <div style="font-size:11px; font-weight:700; color:#6B7280; text-transform:uppercase;">Sandbox Verification</div>
-          <button type="button" class="sim-btn" id="btn-simulate-sca">⚡ Simulate Bank App Approval (SCA Success)</button>
-        </div>
-      </div>
-
-      <!-- PANE: settlement confirmed / receipt (shared by all methods) -->
-      <div class="pane pane-success" id="pane-success">
-        <button type="button" class="back-to-methods-btn" id="btn-back-success">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
-          <span>Back to payment methods</span>
-        </button>
-        <div class="check-green-circle">
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-        </div>
-        <div role="status" aria-live="polite">
-          <h3 class="pbb-title" style="font-size:20px; color:#00875A;">Payment confirmed</h3>
-          <p class="pbb-sub" id="rcpt-sub"></p>
-        </div>
-        <div class="receipt-table">
-          <div class="receipt-row"><span class="k">Merchant</span><span class="v" id="rcpt-merchant"></span></div>
-          <div class="receipt-row"><span class="k">Order ref</span><span class="v" id="rcpt-order"></span></div>
-          <div class="receipt-row"><span class="k">Amount</span><span class="v" id="rcpt-amount" style="font-size:14px;"></span></div>
-          <div class="receipt-row"><span class="k">Reference</span><span class="v" id="rcpt-clearing" style="font-family:monospace; font-size:11px;"></span></div>
-          <div class="receipt-row"><span class="k">Method</span><span class="v" id="rcpt-rail" style="color:#00875A;"></span></div>
-          <div class="receipt-row"><span class="k">Timestamp</span><span class="v" id="rcpt-time"></span></div>
-        </div>
-        <p style="font-size:12px; color:#797C74; margin:0;">Redirecting to <span id="rcpt-merchant-2"></span> in <strong id="countdown-val">5</strong>s...</p>
-        <button type="button" class="btn-pay-action" id="btn-return-store" style="height:44px; font-size:14px;">Return to merchant now →</button>
-      </div>
-
-      <!-- Footer: "Secured by CM.com" on most views, "Powered by CM.com" on Bancontact -->
-      <footer class="secured-bar" id="secured-bar" data-variant="secured">
-        <svg class="lock" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2.5"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
-        <span id="footer-label">Secured by</span>
-        <img src="assets/cm-white.png" alt="CM.com">
-      </footer>
-
-    </section>
-  </main>
-
-  <span class="design-preview-text" id="demo-note">Design preview · No payment will be taken</span>
+<div style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px; border-radius: 12px; background: #0D314B; color: #FFFFFF; font-size: 14px; font-weight: 500; letter-spacing: -0.01em;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2.5"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+<span>Secured by</span>
+<img src="assets/cm-logo-horizontal-white.png" alt="CM.com" style="height: 18px; width: auto;">
+</div>
+<span style="font-size: 12px; font-weight: 500; letter-spacing: -0.02em; color: #707070;">Design preview · No payment will be taken</span>
+</div>
+</div>
+</div>
+<aside class="order-summary-aside" aria-label="Order summary" style="flex: 1 1 440px; min-width: 0; box-sizing: border-box; background: #F4F4F4; border-left: 1px solid #E6E6E6;">
+<div style="position: sticky; top: 0; box-sizing: border-box; padding: 40px 40px 40px 48px; max-width: 520px;">
+<div style="display: flex; flex-direction: column; gap: 20px;">
+<div style="display: flex; flex-direction: row; align-items: center; gap: 14px;">
+<span style="position: relative; width: 64px; height: 64px; flex-shrink: 0; display: block;">
+<img src="assets/merchant-amnesia-ibiza.png" alt="" style="width: 64px; height: 64px; border-radius: 12px; object-fit: cover; display: block; border: 1px solid #DEDEDE; box-sizing: border-box;">
+<span style="position: absolute; top: -8px; right: -8px; min-width: 22px; height: 22px; box-sizing: border-box; padding: 0 6px; border-radius: 11px; background: #191B18; color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;">2</span>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+<span style="font-size: 14px; font-weight: 600; letter-spacing: -0.02em;">General admission</span>
+<span style="font-size: 12px; font-weight: 500; letter-spacing: -0.02em; color: #707070;">Amnesia Ibiza · 7 November 2026</span>
+</span>
+<span style="font-size: 14px; font-weight: 600; letter-spacing: -0.02em;">€120.00</span>
+</div>
+<div style="display: flex; flex-direction: row; align-items: center; gap: 8px; box-sizing: border-box; padding: 6px 6px 6px 14px; border-radius: 12px; background: #FFFFFF; border: 1px solid #DEDEDE;">
+<span style="flex-grow: 1; min-width: 0; font-size: 14px; font-weight: 500; letter-spacing: -0.02em; color: #707070;">Discount code or gift card</span>
+<button type="button" style="height: 34px; padding: 0 12px; border-radius: 8px; border: 1px solid #DEDEDE; background: #F5F5F5; font-family: inherit; font-size: 14px; font-weight: 700; color: #000000; cursor: pointer;">Apply</button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<div style="display: flex; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 14px; font-weight: 500; letter-spacing: -0.02em;"><span>Date</span><span>7 November 2026, 14:32</span></div>
+<div style="display: flex; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 14px; font-weight: 500; letter-spacing: -0.02em;"><span>Order reference</span><span>AMN-2026-08421</span></div>
+<div style="height: 1px; background: #DDDDDD; margin: 6px 0;"></div>
+<div style="display: flex; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 14px; font-weight: 500; letter-spacing: -0.02em;"><span>Subtotal (2 tickets)</span><span>€120.00</span></div>
+<div style="display: flex; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 14px; font-weight: 500; letter-spacing: -0.02em;"><span>Service fees</span><span>Included</span></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="display: flex; flex-direction: row; align-items: baseline; justify-content: space-between;"><span style="font-size: 18px; font-weight: 700; letter-spacing: -0.02em;">Total</span><span style="display: flex; align-items: baseline; gap: 8px;"><span style="font-size: 12px; font-weight: 500; color: #707070;">EUR</span><span style="font-size: 22px; font-weight: 700; letter-spacing: -0.03em;">€120.00</span></span></div>
+<span style="font-size: 14px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #707070;">Includes €20.83 VAT</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; font-weight: 500; letter-spacing: -0.02em;">
+<span style="display: flex; align-items: center; gap: 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1F7A4D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>E-tickets sent instantly to your email</span>
+<span style="display: flex; align-items: center; gap: 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1F7A4D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>All fees included, no surprises</span>
+</div>
+</div>
+</div>
+</aside>
+</div>
 
 <script>
 (function () {
@@ -668,601 +342,286 @@
 
   var CU = window.CardUtils;
 
-  /* ------------------------------------------------------------------
-   * Checkout configuration.
-   * In production the gateway should inject this per order (e.g. as a
-   * JSON <script type="application/json"> block). Nothing here is secret.
-   * ------------------------------------------------------------------ */
-  var CONFIG = {
-    merchant: {
-      name: 'Amnesia Ibiza',
-      site: 'amnesia.es',
-      // Where "Back" and the post-payment redirect send the payer. Must be http(s).
-      returnUrl: 'https://amnesia.es'
-    },
-    order: {
-      reference: 'AMN-2026-08421',
-      amount: 120.00,
-      currency: 'EUR',
-      createdAt: '2026-11-07T14:32:00+01:00',
-      items: '2 × General admission · All fees included'
-    },
-    // true: card and Bancontact submissions are simulated (no PSP connected yet).
-    demoMode: true
+  var state = {
+    picked: '',
+    terms: false,
+    number: '',
+    name: '',
+    expiry: '',
+    cvc: '',
+    summaryOpen: false
   };
 
-  var BANKS = [
-    { id: 'ing', name: 'ING Bank', bic: 'INGBNL2A', country: 'NL', sub: 'Instant Transfer', color: '#FF6200', tag: 'ING' },
-    { id: 'rabobank', name: 'Rabobank', bic: 'RABONL2U', country: 'NL', sub: 'Instant Transfer', color: '#000066', tag: 'RABO' },
-    { id: 'abnamro', name: 'ABN AMRO', bic: 'ABNANL2A', country: 'NL', sub: 'Instant Transfer', color: '#00845F', tag: 'ABN' },
-    { id: 'volksbank', name: 'De Volksbank', bic: 'SNSBNL2A', country: 'NL', sub: 'SNS / ASN / Regio', color: '#E11A27', tag: 'SNS' },
-    { id: 'bunq', name: 'bunq', bic: 'BUNQNL2A', country: 'NL', sub: 'Mobile Bank', color: '#00C48C', tag: 'bunq' },
-    { id: 'revolut', name: 'Revolut', bic: 'REVONL21', country: 'EU', sub: 'SEPA Instant', color: '#000000', tag: 'REV' },
-    { id: 'knab', name: 'Knab', bic: 'KNABNL2H', country: 'NL', sub: 'Instant Transfer', color: '#FA4616', tag: 'KNAB' },
-    { id: 'triodos', name: 'Triodos Bank', bic: 'TRIONL2U', country: 'EU', sub: 'Ethical Banking', color: '#003B46', tag: 'TRIO' }
-  ];
+  function $(id) { return document.getElementById(id); }
 
-  var ICON_CARD = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3A3C37" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"></rect><path d="M3 10h18M7 14.5h3"></path></svg>';
-  var ICON_BANK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EA580C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5L12 4l9 5.5M5 10v7M9.5 10v7M14.5 10v7M19 10v7M3.5 20h17"></path></svg>';
-  var txt = function (s, style) { return '<span style="' + style + '">' + s + '</span>'; };
+  function digitsOf(v) { return String(v || '').replace(/\D/g, ''); }
 
-  /* The 13 methods of the split layout. `action` says what a click does. */
-  var METHODS = [
-    { id: 'card', name: 'Credit or debit card', desc: 'Visa, Mastercard, American Express', icon: ICON_CARD, action: 'card' },
-    { id: 'pbb', name: 'Pay by bank', desc: 'Secure payment from your bank', icon: ICON_BANK, iconStyle: 'background:#FFF7ED; border:1px solid #FFEDD5;', nameStyle: 'color:#C2410C;', action: 'pbb' },
-    { id: 'klarna', name: 'Klarna', desc: 'Pay now or pay later', iconStyle: 'background:#FFB3C7;', icon: '<img src="assets/klarna.svg" alt="" style="width:30px; height:auto;">' },
-    { id: 'ideal', name: 'iDEAL', desc: 'Pay securely with your Dutch bank', iconStyle: 'background:#FFFFFF; border:1px solid #E3E4DE;', icon: '<img src="assets/ideal-wero.svg" alt="iDEAL" style="width:26px; height:auto;">', action: 'pbb' },
-    { id: 'wero', name: 'Wero', desc: 'Pay directly from your bank account', iconStyle: 'background:#FFF48D;', icon: '<img src="assets/wero.png" alt="" style="width:30px; height:auto;">', action: 'wero' },
-    { id: 'sofort', name: 'Sofort', desc: 'Instant online bank transfer', iconStyle: 'background:#FFFFFF; border:1px solid #E3E4DE;', icon: txt('SOFORT', 'background:#FFA8CD; color:#000; font-size:7px; font-weight:800; padding:2px 4px; border-radius:3px;') },
-    // Bancontact acceptance mark + combined tagline per the Bancontact brand guidelines.
-    // TODO: replace assets/bancontact.svg with the 2026 logo set (old logos must be gone by 31 Dec 2026).
-    { id: 'bancontact', name: 'Bancontact', desc: 'Pay with your Bancontact Pay app, your banking app supporting Bancontact payments or Bancontact Card.', iconStyle: 'background:#FFFFFF; border:1px solid #E3E4DE;', icon: '<img src="assets/bancontact.svg" alt="Bancontact" style="width:28px; height:auto;">', action: 'bancontact' },
-    { id: 'riverty', name: 'Riverty', desc: 'Buy now, pay later', iconStyle: 'background:#FFFFFF; border:1px solid #E3E4DE;', icon: txt('RIVERTY', 'font-size:8px; font-weight:700; color:#1C355E; letter-spacing:0.5px;') },
-    { id: 'billink', name: 'Billink', desc: 'Receive your order, pay later', icon: txt('BILL', 'font-size:9px; font-weight:700;') },
-    { id: 'eps', name: 'EPS', desc: 'Pay with your Austrian bank', icon: txt('EPS', 'font-size:9px; font-weight:700;') },
-    { id: 'p24', name: 'Przelewy24', desc: 'Online payments in Poland', icon: txt('P24', 'font-size:9px; font-weight:700;') },
-    { id: 'multibanco', name: 'Multibanco', desc: 'Pay using a payment reference', icon: txt('MB', 'font-size:8px; font-weight:700;') },
-    { id: 'paysafecard', name: 'Paysafecard', desc: 'Pay with a prepaid code', icon: txt('PSC', 'font-size:8px; font-weight:700;') }
-  ];
-
-  var $ = function (id) { return document.getElementById(id); };
-  var PANES = {
-    methods: $('pane-methods'), card: $('pane-card'), bancontact: $('pane-bancontact'),
-    wero: $('pane-wero'), select: $('pane-pbb-select'), handoff: $('pane-pbb-handoff'), success: $('pane-success')
-  };
-  var footer = $('secured-bar');
-
-  var selectedMethod = 'pbb';
-  var selectedBank = null;
-  var activeCountry = 'all';
-  var activePayment = null;
-  var pollTimer = null;
-  var cdTimer = null;
-
-  var API_BASE = window.location.origin.includes('8088') ? '' : 'http://localhost:8088';
-
-  /* ---------- helpers ---------- */
-  var fmtMoney = function (n) {
-    return new Intl.NumberFormat('en-IE', { style: 'currency', currency: CONFIG.order.currency }).format(n);
-  };
-  function fmtDateTime(iso) {
-    var d = new Date(iso);
-    var parts = new Intl.DateTimeFormat('en-GB', {
-      day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Amsterdam'
-    }).formatToParts(d);
-    var p = {};
-    parts.forEach(function (x) { p[x.type] = x.value; });
-    return p.day + ' ' + p.month + ' ' + p.year + ', ' + p.hour + ':' + p.minute;
-  }
-  function safeReturnUrl() {
-    try {
-      var u = new URL(CONFIG.merchant.returnUrl);
-      return (u.protocol === 'https:' || u.protocol === 'http:') ? u.href : '#';
-    } catch (e) { return '#'; }
-  }
-  function clearTimers() {
-    if (pollTimer) clearInterval(pollTimer);
-    if (cdTimer) clearInterval(cdTimer);
-    pollTimer = cdTimer = null;
-  }
-  function goToMerchant() {
-    clearTimers();
-    var url = safeReturnUrl();
-    if (url !== '#') window.location.assign(url);
+  function detectBrand(d) {
+    if (CU && CU.detectBrand) return CU.detectBrand(d);
+    if (/^4/.test(d)) return 'visa';
+    if (/^(5[1-5]|2(2[2-9]|[3-6]\d|7[01]|720))/.test(d)) return 'mastercard';
+    if (/^3[47]/.test(d)) return 'amex';
+    return '';
   }
 
-  function showPane(name) {
-    Object.keys(PANES).forEach(function (k) { PANES[k].classList.toggle('active', k === name); });
-    var bancontact = name === 'bancontact';
-    footer.dataset.variant = bancontact ? 'powered' : 'secured';
-    $('footer-label').textContent = bancontact ? 'Powered by' : 'Secured by';
-    $('row-beneficiary').hidden = !bancontact;
+  function luhnCheck(d) {
+    if (CU && CU.luhn) return CU.luhn(d);
+    var sum = 0, alt = false;
+    for (var i = d.length - 1; i >= 0; i--) {
+      var n = parseInt(d.charAt(i), 10);
+      if (alt) { n *= 2; if (n > 9) n = (n % 10) + 1; }
+      sum += n;
+      alt = !alt;
+    }
+    return sum % 10 === 0;
   }
 
-  function setStatus(msg) { $('method-status').textContent = msg || ''; }
+  function validateCard() {
+    var raw = digitsOf(state.number);
+    var b = detectBrand(raw);
+    var maxLen = (b === 'amex') ? 15 : 16;
+    var cvcLen = (b === 'amex') ? 4 : 3;
 
-  /* ---------- static content from CONFIG ---------- */
-  function fillOrder() {
-    var m = CONFIG.merchant, o = CONFIG.order;
-    $('merchant-name').textContent = m.name;
-    $('merchant-site').textContent = m.site;
-    $('order-date').textContent = fmtDateTime(o.createdAt);
-    $('order-ref').textContent = o.reference;
-    $('order-beneficiary').textContent = m.name;
-    $('order-amount').textContent = fmtMoney(o.amount);
-    $('order-currency').textContent = o.currency;
-    $('order-items').textContent = o.items;
-    $('btn-back-merchant').href = safeReturnUrl();
-    $('btn-back-merchant').setAttribute('aria-label', 'Back to ' + m.name);
-    $('handoff-amount').textContent = fmtMoney(o.amount) + ' ' + o.currency;
-    $('handoff-merchant').textContent = m.name;
-    $('rcpt-merchant').textContent = m.name;
-    $('rcpt-merchant-2').textContent = m.name;
-    $('rcpt-order').textContent = o.reference;
-    $('rcpt-amount').textContent = fmtMoney(o.amount) + ' ' + o.currency;
-    $('methods-count').textContent = METHODS.length + ' payment methods available';
-    $('method-status').textContent = 'Scroll inside the list to see all ' + METHODS.length + ' payment methods';
-    $('demo-note').style.display = CONFIG.demoMode ? '' : 'none';
-    var payLabel = 'Pay ' + fmtMoney(o.amount);
-    $('btn-card-pay').textContent = payLabel;
-    $('btn-bc-pay').textContent = payLabel;
-    $('bc-sim-box').style.display = CONFIG.demoMode ? '' : 'none';
-  }
+    var numComplete = raw.length === maxLen;
+    var numOk = numComplete && luhnCheck(raw);
 
-  /* ---------- payment method list ---------- */
-  function renderMethods() {
-    var list = $('plist');
-    list.innerHTML = '';
-    METHODS.forEach(function (m) {
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'tile' + (m.id === selectedMethod ? ' selected' : '');
-      b.dataset.method = m.id;
-      b.setAttribute('aria-pressed', m.id === selectedMethod ? 'true' : 'false');
-      b.innerHTML =
-        '<span class="tile-icon-box" style="' + (m.iconStyle || '') + '">' + m.icon + '</span>' +
-        '<span class="tile-body"><span class="tile-name" style="' + (m.nameStyle || '') + '">' + m.name + '</span>' +
-        '<span class="tile-desc">' + m.desc + '</span></span>';
-      b.addEventListener('click', function () { chooseMethod(m); });
-      list.appendChild(b);
-    });
-  }
+    var expDigits = digitsOf(state.expiry);
+    var expComplete = expDigits.length === 4;
+    var expOk = false;
+    if (expComplete) {
+      var m = Number(expDigits.slice(0, 2));
+      var y = 2000 + Number(expDigits.slice(2));
+      var now = new Date();
+      expOk = m >= 1 && m <= 12 && (y > now.getFullYear() || (y === now.getFullYear() && m >= now.getMonth() + 1));
+    }
 
-  function chooseMethod(m) {
-    selectedMethod = m.id;
-    renderMethods();
-    if (m.action === 'card') return openCard();
-    if (m.action === 'bancontact') return openBancontact();
-    if (m.action === 'wero') return openWero();
-    if (m.action === 'pbb') return openPayByBank();
-    setStatus(m.name + ' is not connected in this demo yet.');
-  }
+    var nameOk = state.name.trim().length > 1;
+    var cvcOk = digitsOf(state.cvc).length === cvcLen;
 
-  document.querySelectorAll('[data-express]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      setStatus(btn.dataset.express + ' needs its official wallet button and is not connected in this demo yet.');
-    });
-  });
-
-  /* ---------- card form with live card preview ---------- */
-  var card = { number: '', name: '', expiry: '', cvc: '', focus: '', busy: false };
-  var cardEls = {
-    flip: $('cc-flip'), num: $('cc-num'), name: $('cc-name'), exp: $('cc-exp'), cvc: $('cc-cvc'),
-    brandImg: $('cc-brand-img'), cellName: $('cc-cell-name'), cellExp: $('cc-cell-exp'),
-    inNum: $('cc-number'), inName: $('cc-name-in'), inExp: $('cc-exp-in'), inCvc: $('cc-cvc-in'),
-    errNum: $('cc-number-err'), errExp: $('cc-exp-err'), pay: $('btn-card-pay')
-  };
-  var BRAND_LOGO = { visa: 'assets/visa.svg', mastercard: 'assets/mastercard.svg', amex: 'assets/amex.svg' };
-
-  function renderCard() {
-    var digits = CU.digitsOf(card.number);
-    var brand = CU.detectBrand(digits);
-    var numLen = CU.maxLength(brand);
-    var cvcLen = CU.cvcLength(brand);
-
-    cardEls.flip.dataset.brand = brand;
-    cardEls.flip.classList.toggle('flipped', card.focus === 'cvc');
-    if (brand) cardEls.brandImg.src = BRAND_LOGO[brand];
-
-    cardEls.num.textContent = CU.maskedDisplay(digits, brand);
-    cardEls.num.classList.toggle('cc-dim', !digits.length);
-    cardEls.num.classList.toggle('cc-hl', card.focus === 'number');
-    cardEls.name.textContent = card.name ? card.name.toUpperCase() : 'YOUR NAME';
-    cardEls.name.classList.toggle('cc-dim', !card.name);
-    cardEls.cellName.classList.toggle('cc-hl', card.focus === 'name');
-    cardEls.exp.textContent = card.expiry || 'MM/YY';
-    cardEls.exp.classList.toggle('cc-dim', !card.expiry);
-    cardEls.cellExp.classList.toggle('cc-hl', card.focus === 'expiry');
-    cardEls.cvc.textContent = card.cvc || '•'.repeat(cvcLen);
-    cardEls.inCvc.placeholder = (brand === 'amex' ? '4' : '3') + ' digits';
-
-    var numberComplete = digits.length === numLen;
-    var numberOk = CU.isNumberValid(digits);
-    var expComplete = CU.isExpiryComplete(card.expiry);
-    var expOk = CU.isExpiryValid(card.expiry);
-    cardEls.inNum.classList.toggle('err', numberComplete && !numberOk);
-    cardEls.errNum.hidden = !(numberComplete && !numberOk);
-    cardEls.inExp.classList.toggle('err', expComplete && !expOk);
-    cardEls.errExp.hidden = !(expComplete && !expOk);
-
-    var ok = numberOk && expOk && CU.isNameValid(card.name) && card.cvc.length === cvcLen;
-    cardEls.pay.disabled = !ok || card.busy;
-  }
-
-  function resetCard() {
-    card = { number: '', name: '', expiry: '', cvc: '', focus: '', busy: false };
-    cardEls.inNum.value = cardEls.inName.value = cardEls.inExp.value = cardEls.inCvc.value = '';
-    cardEls.pay.textContent = 'Pay ' + fmtMoney(CONFIG.order.amount);
-    renderCard();
-  }
-
-  function openCard() { resetCard(); showPane('card'); }
-
-  cardEls.inNum.addEventListener('input', function (e) {
-    card.number = CU.formatNumber(e.target.value);
-    e.target.value = card.number;
-    var maxCvc = CU.cvcLength(CU.detectBrand(card.number));
-    card.cvc = card.cvc.slice(0, maxCvc);
-    cardEls.inCvc.value = card.cvc;
-    renderCard();
-  });
-  cardEls.inName.addEventListener('input', function (e) {
-    card.name = CU.sanitizeName(e.target.value);
-    e.target.value = card.name;
-    renderCard();
-  });
-  cardEls.inExp.addEventListener('input', function (e) {
-    card.expiry = CU.formatExpiry(e.target.value);
-    e.target.value = card.expiry;
-    renderCard();
-  });
-  cardEls.inCvc.addEventListener('input', function (e) {
-    card.cvc = CU.sanitizeCvc(e.target.value, CU.detectBrand(card.number));
-    e.target.value = card.cvc;
-    renderCard();
-  });
-  [['number', cardEls.inNum], ['name', cardEls.inName], ['expiry', cardEls.inExp], ['cvc', cardEls.inCvc]].forEach(function (pair) {
-    pair[1].addEventListener('focus', function () { card.focus = pair[0]; renderCard(); });
-    pair[1].addEventListener('blur', function () { card.focus = ''; renderCard(); });
-  });
-
-  $('card-form').addEventListener('submit', function (e) {
-    e.preventDefault();
-    if (cardEls.pay.disabled) return;
-    card.busy = true;
-    cardEls.pay.disabled = true;
-    cardEls.pay.textContent = 'Processing…';
-    // TODO(PSP): hand the card data to the PSP's hosted fields / tokenisation and confirm server-side.
-    // The gateway in this repo does not process cards. Demo mode only simulates an approval.
-    setTimeout(function () {
-      card.busy = false;
-      settleSuccess({ clearing_reference: 'CARD-DEMO-' + Date.now(), rail: 'Credit or debit card' });
-    }, 1400);
-  });
-
-  /* ---------- Bancontact: QR + card ---------- */
-  var bc = { number: '', expiry: '', busy: false };
-  var bcEls = {
-    inNum: $('bc-number'), inExp: $('bc-exp'), errNum: $('bc-number-err'), errExp: $('bc-exp-err'), pay: $('btn-bc-pay')
-  };
-
-  function renderBancontactForm() {
-    var digits = CU.digitsOf(bc.number);
-    var numberComplete = digits.length === 16;
-    var numberOk = CU.isNumberValid(digits);
-    var expComplete = CU.isExpiryComplete(bc.expiry);
-    var expOk = CU.isExpiryValid(bc.expiry);
-    bcEls.inNum.classList.toggle('err', numberComplete && !numberOk);
-    bcEls.errNum.hidden = !(numberComplete && !numberOk);
-    bcEls.inExp.classList.toggle('err', expComplete && !expOk);
-    bcEls.errExp.hidden = !(expComplete && !expOk);
-    bcEls.pay.disabled = !(numberOk && expOk) || bc.busy;
-  }
-
-  /*
-   * Render the QR exactly as the payment provider returned it.
-   * `payload` is the QR content from the Bancontact Pay API response; do not alter or restyle it.
-   * Demo mode encodes a placeholder URL so the layout can be reviewed.
-   */
-  function renderQr(el, payload) {
-    el.innerHTML = '';
-    if (typeof qrcode !== 'function') return;
-    try {
-      var qr = qrcode(0, 'M');
-      qr.addData(payload);
-      qr.make();
-      el.innerHTML = qr.createSvgTag({ scalable: true });
-    } catch (err) { /* leave empty */ }
-  }
-
-  function openBancontact() {
-    bc = { number: '', expiry: '', busy: false };
-    bcEls.inNum.value = bcEls.inExp.value = '';
-    bcEls.pay.textContent = 'Pay ' + fmtMoney(CONFIG.order.amount);
-    // TODO(Bancontact): create the Bancontact Pay payment via the API and pass its `qr_payload` here.
-    renderQr($('bc-qr'), 'https://example.invalid/demo/bancontact-pay/' + encodeURIComponent(CONFIG.order.reference));
-    renderBancontactForm();
-    showPane('bancontact');
-  }
-
-  bcEls.inNum.addEventListener('input', function (e) {
-    bc.number = CU.formatNumber(e.target.value, '');
-    e.target.value = bc.number;
-    renderBancontactForm();
-  });
-  bcEls.inExp.addEventListener('input', function (e) {
-    bc.expiry = CU.formatExpiry(e.target.value);
-    e.target.value = bc.expiry;
-    renderBancontactForm();
-  });
-  $('bc-form').addEventListener('submit', function (e) {
-    e.preventDefault();
-    if (bcEls.pay.disabled) return;
-    bc.busy = true;
-    bcEls.pay.disabled = true;
-    bcEls.pay.textContent = 'Processing…';
-    // TODO(Bancontact): submit card number + expiry to the PSP; Bancontact Card needs nothing else.
-    setTimeout(function () {
-      bc.busy = false;
-      settleSuccess({ clearing_reference: 'BCARD-DEMO-' + Date.now(), rail: 'Bancontact Card' });
-    }, 1400);
-  });
-  $('btn-bc-simulate').addEventListener('click', function () {
-    this.disabled = true;
-    setTimeout(function () {
-      settleSuccess({ clearing_reference: 'BCPAY-DEMO-' + Date.now(), rail: 'Bancontact Pay' });
-    }, 600);
-  });
-
-  /* ---------- Wero flow (EPI European Payments Initiative) ---------- */
-  var weroQrBox = $('wero-qr-box');
-  var btnWeroSimulate = $('btn-wero-simulate');
-  var weroLifecycleBadge = $('wero-lifecycle-badge');
-  var weroLifecycleText = $('wero-lifecycle-text');
-  var weroConsentIdEl = $('wero-consent-id');
-
-  window.openWero = openWero;
-  function openWero() {
-    clearTimers();
-    var consentId = 'cst_' + Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 6);
-    weroConsentIdEl.textContent = consentId;
-
-    // Follow official EPI Direct QR payload specification
-    var weroPayload = 'https://wero.epicompany.eu/qr/v1/consent/' + consentId +
-      '?amt=' + encodeURIComponent(CONFIG.order.amount) +
-      '&cur=' + encodeURIComponent(CONFIG.order.currency) +
-      '&acpt=Amnesia+Ibiza' +
-      '&ref=' + encodeURIComponent(CONFIG.order.reference) +
-      '&ret=' + encodeURIComponent(window.location.origin + window.location.pathname + '?payment_id=' + consentId);
-    renderQr(weroQrBox, weroPayload);
-
-    weroLifecycleText.textContent = 'Step 1/4: Waiting for Consent QR scan in Wero wallet...';
-    btnWeroSimulate.disabled = false;
-    btnWeroSimulate.textContent = '⚡ Simulate Step-by-Step EPI Flow (Consent → Auth → Capture → Settlement)';
-    showPane('wero');
-  }
-
-  btnWeroSimulate.addEventListener('click', function () {
-    btnWeroSimulate.disabled = true;
-
-    // Step 1: Consent granted in wallet via SCA
-    weroLifecycleText.textContent = 'Step 1/4: SCA Consent granted by Consumer (JWS Token signed)...';
-
-    setTimeout(function () {
-      // Step 2: Payment request created and authorised by Consumer PSP
-      weroLifecycleText.textContent = 'Step 2/4: Payment Authorisation granted by Consumer PSP...';
-
-      setTimeout(function () {
-        // Step 3: Payment captured by Acceptor PSP
-        weroLifecycleText.textContent = 'Step 3/4: Payment Capture accepted by EPI Central Services...';
-
-        setTimeout(function () {
-          // Step 4: SCT Inst asynchronous settlement
-          settleSuccess({
-            clearing_reference: 'EPI-SCT-INST-' + Date.now(),
-            rail: 'Wero · European Payments Initiative (SEPA Instant TIPS / RT1)'
-          });
-        }, 800);
-      }, 800);
-    }, 800);
-  });
-
-  /* ---------- Pay by bank (existing flow) ---------- */
-  var searchInput = $('pbb-search');
-  var bankListEl = $('pbb-bank-list');
-  var countryTabs = document.querySelectorAll('.pbb-tab');
-  var btnContinue = $('btn-continue-pbb');
-  var handoffTitle = $('handoff-title');
-  var qrBox = $('pbb-qr-box');
-  var webBankingLink = $('web-banking-link');
-  var btnSimulateSca = $('btn-simulate-sca');
-
-  window.openPayByBank = openPayByBank;
-  function openPayByBank() {
-    showPane('select');
-    renderBanks();
-  }
-
-  function renderBanks() {
-    var q = (searchInput.value || '').trim().toLowerCase();
-    var filtered = BANKS.filter(function (b) {
-      if (activeCountry !== 'all' && b.country !== activeCountry) return false;
-      if (!q) return true;
-      return b.name.toLowerCase().includes(q) || b.bic.toLowerCase().includes(q) || b.tag.toLowerCase().includes(q);
-    });
-    bankListEl.innerHTML = '';
-    filtered.forEach(function (b) {
-      var isSel = selectedBank && selectedBank.id === b.id;
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'tile' + (isSel ? ' selected' : '');
-      btn.setAttribute('role', 'radio');
-      btn.setAttribute('aria-checked', isSel ? 'true' : 'false');
-      btn.innerHTML =
-        '<span class="tile-icon-box" style="background:' + b.color + '; color:#fff; font-size:10px; font-weight:800;">' + b.tag + '</span>' +
-        '<span class="tile-body"><span class="tile-name">' + b.name + '</span><span class="tile-desc">' + b.sub + '</span></span>';
-      btn.onclick = function () {
-        selectedBank = b;
-        renderBanks();
-        btnContinue.disabled = false;
-        btnContinue.querySelector('span').textContent = 'Continue with ' + b.name;
-      };
-      bankListEl.appendChild(btn);
-    });
-  }
-
-  async function startHandoff() {
-    if (!selectedBank) return;
-    btnContinue.disabled = true;
-    btnContinue.querySelector('span').textContent = 'Connecting with bank...';
-
-    var payload = {
-      bank_id: selectedBank.id,
-      amount: CONFIG.order.amount,
-      currency: CONFIG.order.currency,
-      merchant_reference: CONFIG.order.reference,
-      creditor_iban: 'NL91ABNA0417164300',
-      description: CONFIG.merchant.name + ' - Order #' + CONFIG.order.reference
+    return {
+      brand: b,
+      numComplete: numComplete,
+      numOk: numOk,
+      expComplete: expComplete,
+      expOk: expOk,
+      valid: numOk && expOk && nameOk && cvcOk
     };
+  }
 
-    try {
-      var res = await fetch(API_BASE + '/api/v1/payments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+  function updatePayButtonState() {
+    var btn = $('btn-main-pay');
+    if (!btn) return;
+
+    var isCard = state.picked === 'card';
+    var cardCheck = isCard ? validateCard() : null;
+    var cardValid = cardCheck ? cardCheck.valid : false;
+
+    // payDisabled = !picked || !terms || (picked === 'card' && !cardValid)
+    var payDisabled = !state.picked || (isCard && !cardValid);
+
+    btn.disabled = payDisabled;
+    btn.style.opacity = payDisabled ? '0.4' : '1';
+    btn.style.cursor = payDisabled ? 'not-allowed' : 'pointer';
+
+    // Inline errors for card
+    if (isCard) {
+      var numErr = $('cc-number-err');
+      var numInput = $('cc-number');
+      if (numErr && numInput) {
+        if (cardCheck.numComplete && !cardCheck.numOk) {
+          numErr.style.display = 'block';
+          numInput.classList.add('fld-err');
+        } else {
+          numErr.style.display = 'none';
+          numInput.classList.remove('fld-err');
+        }
+      }
+
+      var expErr = $('cc-exp-err');
+      var expInput = $('cc-exp');
+      if (expErr && expInput) {
+        if (cardCheck.expComplete && !cardCheck.expOk) {
+          expErr.style.display = 'block';
+          expInput.classList.add('fld-err');
+        } else {
+          expErr.style.display = 'none';
+          expInput.classList.remove('fld-err');
+        }
+      }
+
+      var cvcInput = $('cc-cvc');
+      if (cvcInput) {
+        cvcInput.placeholder = cardCheck.brand === 'amex' ? '4 digits' : '3 digits';
+      }
+    }
+  }
+
+  function setPickedMethod(id) {
+    state.picked = id;
+
+    // Update accordion rows visually
+    document.querySelectorAll('.pmrow').forEach(function (btn) {
+      var m = btn.dataset.method;
+      var radioCircle = btn.querySelector('span:first-child');
+      var detail = $('pm-detail-' + m);
+
+      if (m === id) {
+        btn.setAttribute('aria-checked', 'true');
+        btn.style.background = '#EDEDED';
+        if (radioCircle) radioCircle.style.border = '6px solid #1D1E1D';
+        if (detail) detail.style.display = 'block';
+      } else {
+        btn.setAttribute('aria-checked', 'false');
+        btn.style.background = '#FFFFFF';
+        if (radioCircle) radioCircle.style.border = '1px solid #C9CBC5';
+        if (detail) detail.style.display = 'none';
+      }
+    });
+
+    updatePayButtonState();
+  }
+
+  function toggleTerms() {
+    state.terms = !state.terms;
+    var btn = $('btn-terms-toggle');
+    var icon = $('terms-check-icon');
+    if (btn && icon) {
+      btn.setAttribute('aria-checked', state.terms ? 'true' : 'false');
+      btn.style.background = state.terms ? '#191B18' : '#FFFFFF';
+      icon.style.display = state.terms ? 'block' : 'none';
+    }
+    updatePayButtonState();
+  }
+
+  function toggleSummary() {
+    state.summaryOpen = !state.summaryOpen;
+    var btn = $('btn-summary-toggle');
+    var chevron = $('summary-chevron');
+    var dropdown = $('mobile-summary-dropdown');
+
+    if (btn && chevron && dropdown) {
+      btn.setAttribute('aria-expanded', state.summaryOpen ? 'true' : 'false');
+      chevron.style.transform = state.summaryOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+      dropdown.style.display = state.summaryOpen ? 'block' : 'none';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    // Accordion click handlers
+    document.querySelectorAll('.pmrow').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var m = btn.dataset.method;
+        setPickedMethod(m);
       });
-      if (res.ok) {
-        activePayment = await res.json();
-      } else {
-        throw new Error();
-      }
-    } catch (e) {
-      activePayment = {
-        payment_id: 'PAY-GO-' + Math.random().toString(36).substr(2, 8).toUpperCase(),
-        sca_redirect_url: 'http://localhost:8088/#authorize?payment_id=AMN-' + Date.now() + '&bank=' + selectedBank.id
-      };
+    });
+
+    // Terms toggle
+    var termsBtn = $('btn-terms-toggle');
+    if (termsBtn) termsBtn.addEventListener('click', toggleTerms);
+
+    // Mobile summary toggle
+    var sumToggle = $('btn-summary-toggle');
+    if (sumToggle) sumToggle.addEventListener('click', toggleSummary);
+
+    // Card input handlers
+    var numIn = $('cc-number');
+    if (numIn) {
+      numIn.addEventListener('input', function (e) {
+        var raw = digitsOf(e.target.value);
+        var b = detectBrand(raw);
+        var d = raw.slice(0, b === 'amex' ? 15 : 16);
+        if (CU && CU.formatNumber) {
+          state.number = CU.formatNumber(d, b);
+        } else {
+          var groups = (b === 'amex') ? [4, 6, 5] : [4, 4, 4, 4];
+          var out = [], i = 0;
+          groups.forEach(function (g) { if (i < d.length) out.push(d.slice(i, i + g)); i += g; });
+          state.number = out.join(' ');
+        }
+        e.target.value = state.number;
+        updatePayButtonState();
+      });
     }
 
-    handoffTitle.textContent = 'Authorize with ' + selectedBank.name;
-    var url = activePayment.sca_redirect_url || 'https://bank.nl/auth';
-    webBankingLink.href = url;
-    renderQr(qrBox, url);
-    showPane('handoff');
-
-    if (pollTimer) clearInterval(pollTimer);
-    pollTimer = setInterval(async function () {
-      try {
-        var r = await fetch(API_BASE + '/api/v1/payments/' + activePayment.payment_id);
-        if (r.ok) {
-          var data = await r.json();
-          if (data.status === 'ACSC_SETTLED' || data.authorized_at) {
-            clearInterval(pollTimer);
-            settleSuccess({ clearing_reference: data.clearing_reference, rail: 'Pay by bank · SEPA Instant (TIPS / RT1)' });
-          }
-        }
-      } catch (e) { /* keep polling */ }
-    }, 2000);
-  }
-
-  async function simulateSca() {
-    btnSimulateSca.disabled = true;
-    btnSimulateSca.textContent = '⚡ Settling with Bank...';
-    if (activePayment && activePayment.payment_id) {
-      try {
-        var r = await fetch(API_BASE + '/api/v1/payments/' + activePayment.payment_id + '/authorize', { method: 'POST' });
-        if (r.ok) {
-          var data = await r.json();
-          clearInterval(pollTimer);
-          settleSuccess({ clearing_reference: data.clearing_reference, rail: 'Pay by bank · SEPA Instant (TIPS / RT1)' });
-          return;
-        }
-      } catch (e) { /* fall through to local simulation */ }
+    var nameIn = $('cc-name');
+    if (nameIn) {
+      nameIn.addEventListener('input', function (e) {
+        state.name = e.target.value.replace(/[0-9]/g, '').slice(0, 26);
+        e.target.value = state.name;
+        updatePayButtonState();
+      });
     }
-    setTimeout(function () {
-      clearInterval(pollTimer);
-      settleSuccess({ clearing_reference: 'SCT-INST-GO-' + Date.now(), rail: 'Pay by bank · SEPA Instant (TIPS / RT1)' });
-    }, 600);
-  }
 
-  /* ---------- success + redirect back to the merchant ---------- */
-  function settleSuccess(data) {
-    showPane('success');
-    $('rcpt-sub').textContent = 'Your payment to ' + CONFIG.merchant.name + ' was received.';
-    $('rcpt-clearing').textContent = data.clearing_reference || ('REF-' + Date.now());
-    $('rcpt-rail').textContent = data.rail || '';
-    $('rcpt-time').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    var expIn = $('cc-exp');
+    if (expIn) {
+      expIn.addEventListener('input', function (e) {
+        var d = digitsOf(e.target.value).slice(0, 4);
+        if (d.length >= 1 && d[0] > '1') d = '0' + d;
+        if (d.length >= 2 && Number(d.slice(0, 2)) > 12) d = '12' + d.slice(2);
+        d = d.slice(0, 4);
+        state.expiry = d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d;
+        e.target.value = state.expiry;
+        updatePayButtonState();
+      });
+    }
 
-    var s = 5;
-    $('countdown-val').textContent = s;
-    if (cdTimer) clearInterval(cdTimer);
-    cdTimer = setInterval(function () {
-      s -= 1;
-      if (s <= 0) {
-        clearInterval(cdTimer);
-        goToMerchant();
-      } else {
-        $('countdown-val').textContent = s;
-      }
-    }, 1000);
-  }
+    var cvcIn = $('cc-cvc');
+    if (cvcIn) {
+      cvcIn.addEventListener('input', function (e) {
+        var raw = digitsOf(state.number);
+        var b = detectBrand(raw);
+        var cvcLen = (b === 'amex') ? 4 : 3;
+        state.cvc = digitsOf(e.target.value).slice(0, cvcLen);
+        e.target.value = state.cvc;
+        updatePayButtonState();
+      });
+    }
 
-  /* ---------- event bindings ---------- */
-  $('btn-back-merchant').addEventListener('click', function (e) {
-    e.preventDefault();
-    goToMerchant();
-  });
-  $('btn-back-card').onclick = function () {
-    resetCard();
-    showPane('methods');
-  };
-  $('btn-back-bancontact').onclick = function () {
-    if (pollTimer) clearInterval(pollTimer);
-    showPane('methods');
-  };
-  $('btn-back-wero').onclick = function () {
-    if (pollTimer) clearInterval(pollTimer);
-    showPane('methods');
-  };
-  $('btn-back-to-methods').onclick = function () {
-    showPane('methods');
-  };
-  $('btn-back-to-banks').onclick = function () {
-    if (pollTimer) clearInterval(pollTimer);
-    btnSimulateSca.disabled = false;
-    btnSimulateSca.textContent = '⚡ Simulate Bank App Approval (SCA Success)';
-    btnContinue.querySelector('span').textContent = selectedBank ? 'Continue with ' + selectedBank.name : 'Select your bank to continue';
-    btnContinue.disabled = !selectedBank;
-    showPane('select');
-  };
-  $('btn-back-success').onclick = function () {
-    clearTimers();
-    showPane('methods');
-  };
-  btnContinue.onclick = startHandoff;
-  btnSimulateSca.onclick = simulateSca;
-  $('btn-return-store').onclick = goToMerchant;
-  searchInput.oninput = renderBanks;
-  countryTabs.forEach(function (t) {
-    t.onclick = function () {
-      countryTabs.forEach(function (tab) { tab.classList.remove('active'); });
-      t.classList.add('active');
-      activeCountry = t.dataset.country;
-      renderBanks();
-    };
+    // Main Pay Button Click Handler
+    var payBtn = $('btn-main-pay');
+    if (payBtn) {
+      payBtn.addEventListener('click', function () {
+        if (payBtn.disabled) return;
+        handlePaymentSubmission();
+      });
+    }
+
+    // Express Checkout buttons
+    var btnAppPay = document.querySelector('button[aria-label="Pay with Apple Pay"]');
+    if (btnAppPay) {
+      btnAppPay.addEventListener('click', function () {
+        alert('Apple Pay express checkout simulated successfully.');
+      });
+    }
+    var btnPp = document.querySelector('button[aria-label="PayPal"]');
+    if (btnPp) {
+      btnPp.addEventListener('click', function () {
+        alert('PayPal express checkout simulated successfully.');
+      });
+    }
+    var btnGp = document.querySelector('button[aria-label="Google Pay"]');
+    if (btnGp) {
+      btnGp.addEventListener('click', function () {
+        alert('Google Pay express checkout simulated successfully.');
+      });
+    }
   });
 
-  /* ---------- init ---------- */
-  fillOrder();
-  renderMethods();
-  renderCard();
-  showPane('methods');
+  function handlePaymentSubmission() {
+    var m = state.picked;
+    if (!m) return;
 
-  var urlParams = new URLSearchParams(window.location.search);
-  var deepLink = urlParams.get('method') || (window.location.hash.includes('pay-by-bank') ? 'pay-by-bank' : '');
-  if (deepLink === 'pay-by-bank') { selectedMethod = 'pbb'; renderMethods(); openPayByBank(); }
-  else if (deepLink === 'card') { selectedMethod = 'card'; renderMethods(); openCard(); }
-  else if (deepLink === 'bancontact') { selectedMethod = 'bancontact'; renderMethods(); openBancontact(); }
-  else if (deepLink === 'wero') { selectedMethod = 'wero'; renderMethods(); openWero(); }
+    if (m === 'pbb') {
+      // Navigate directly to the official Pay by Bank Authorisation QR screen
+      window.location.href = 'pay-by-bank-auth.html';
+    } else if (m === 'card') {
+      window.location.href = 'pay-by-bank-success.html';
+    } else {
+      alert(m.toUpperCase() + ' payment initiated: Redirecting to payment provider...');
+    }
+  }
+
+
 })();
 </script>
 </body>

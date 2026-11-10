@@ -2,13 +2,13 @@
 
 Merchant used in all mocks: **Amnesia Ibiza** (amnesia.es), order `AMN-2026-08421`, 2 × General admission, **€120.00**, date shown as `7 November 2026, 14:32` (the Main/Scroll/Grid/Card boards use merchant data from a props enum; see Main).
 
-Eight boards, 1440×1000 desktop frames (updated 9 Nov 2026: single Back button, grey merchant side, Bancontact footer, new `FramerList` board). Live visual reference (org-shared): https://claude.ai/artifact/8N4ovJW9rwzx3Y1Zo5x9yN (canvas "Design" artifact; the hosted URL is the source of truth for how each board looks).
+Fifteen boards (updated 10 Nov 2026: single Back button, grey merchant side, Bancontact footer, `FramerList`, `FramerMore`, four pay-by-bank boards, and the **single scrolling pane** desktop + mobile boards, see section 2a). Live visual reference (org-shared): https://claude.ai/artifact/8N4ovJW9rwzx3Y1Zo5x9yN (canvas "Design" artifact; the hosted URL is the source of truth for how each board looks).
 
 ## 1. What is in this bundle
 
 | Path | Purpose |
 |---|---|
-| `source/*.dc.html` | The 7 boards as prototype source (authoritative for exact CSS values, copy, sizes, state logic). |
+| `source/*.dc.html` | The boards as prototype source (authoritative for exact CSS values, copy, sizes, state logic). |
 | `source/canvas.json` | Board titles, sizes, canvas positions. |
 | `assets-named/` | All logo/image assets with readable names. |
 | `asset-map.json` | Maps the `/_blob/<id>` URLs used in the sources to files in `assets-named/`. |
@@ -32,10 +32,62 @@ Re-implement in the target stack (React or whatever the checkout uses). Keep the
 | `Card` | Card details | 480px card | Click to Pay button, "Or enter card details", dynamic flip-card preview, form (number, name, expiry, CVC), Pay button. |
 | `FramerList` | Split layout, 1-wide list | Copy of `Framer` with the payment methods in a single column (scroll area 360px) | Same behaviour as `Framer`. |
 | `Framer` | Split layout | 1000px floating box, two halves | Left: merchant, "Complete your payment", date + order reference, amount. Right: express row, 2-column scrollable method list (13 methods), dark-blue footer. |
+| `FramerMore` | Split layout, "More payment methods" | Copy of `FramerList` | Four methods shown (Card, Pay by bank, iDEAL, Bancontact), then a "More payment methods" row with 5 preview logos + count that expands the other 9 inline ("Show fewer" collapses). No inner scroll area. |
 | `FramerCard` | Split layout, card details | Same split box | Right half: back link to `Framer`, flip-card preview, form, Pay €120.00. |
 | `Bancontact` | Bancontact (QR + card) | Same split box | Right half: Bancontact Pay (QR plus steps), divider, Bancontact Card (number + expiry only), footer. |
 
+| `PayByBank` | Pay by bank, choose your bank | Split box | Search, tabs All/NL/BE/DE, "recently used" bank, 14 banks, CTA to the authorise board. |
+| `PayByBankAuth` | Pay by bank, authorise | Split box | QR for desktop, step list, "Change bank", prototype links to Success/Failed. |
+| `PayByBankSuccess` / `PayByBankFailed` | Pay by bank, result | Split box | Confirmed receipt; failed with reason (expired / declined / cancelled). |
+| `SinglePane` | Single scrolling pane, desktop | Two columns, one continuous scroll | **See section 2a.** |
+| `SinglePaneMobile` | Single scrolling pane, mobile (390 wide) | One column | **See section 2a.** |
+
 **Navigation (updated):** every board has exactly one "Back" control, top-left, that returns the payer to the merchant shop (placeholder `https://amnesia.es`; production uses the merchant's return/cancel URL). The old "Choose another payment method" links were removed. Boards are no longer linked to each other.
+
+## 2a. Single scrolling pane (`SinglePane`, `SinglePaneMobile`) — implement this
+
+Modelled on a Shopify-style one-page checkout: everything is on one continuous scrolling page (no split box, no inner scroll areas, no multi-step panes). Source: `source/SinglePane.dc.html` (desktop, 1440) and `source/SinglePaneMobile.dc.html` (390). The logic is identical; only layout differs. Font Inter 500/600/700, text `#000000`, secondary `#707070`/`#666666`, borders `#DEDEDE`, field/row radius 12px, buttons 48-50px high. Selected-state dark `#191B18`/`#1D1E1D`.
+
+### Desktop layout
+- Full-width page, two columns that wrap below ~1000px: **left = payment column** (flex `1 1 560px`, white), **right = order summary** (`<aside>`, flex `1 1 440px`, background `#F4F4F4`, 1px left border `#E6E6E6`, content `position: sticky; top: 0`, max-width 520px, padding 40/40/40/48).
+- Left column content is `max-width: 540px`, right-aligned against the divider (`margin-left: auto`), padding 40/48/48/40, stacked with 28px gaps.
+- Page scrolls normally; the summary stays sticky. No fixed heights.
+
+### Mobile layout
+- One column, white. At the very top a **collapsed "Order summary" bar** on `#F4F4F4` with the total (€120.00) and a chevron. State `summaryOpen`; `aria-expanded`; chevron rotates 180° when open. Expanded it shows the same summary content as the desktop aside (items, discount code, details, totals, benefits). Then the payment content with 24/16/32 padding.
+
+### Content order (payment column)
+1. **Back** link (top-left, chevron + "Back") → returns to the merchant (`https://amnesia.es` placeholder; use the merchant return/cancel URL). The only back control.
+2. **Merchant header**: 44px rounded logo, "Amnesia Ibiza", "amnesia.es".
+3. **Express checkout** label (centered), then three equal-width buttons in a row: Apple Pay (black `#191B18`, white glyph), PayPal (yellow `#FFC439`, in the middle), Google Pay (white, 1px `#E3E4DE`). Use the official SDK buttons in production (section 6). Then an "OR" divider.
+4. **Payment** section: h2 "Payment", subtitle "All transactions are secure and encrypted.", then **one bordered radiogroup box** (1px `#DEDEDE`, radius 12px, overflow hidden) containing one row per method, separated by 1px dividers.
+5. **Terms checkbox** (custom checkbox button, 20px, radius 6): "I have read and understood the Terms and Conditions and the Privacy Policy." Required: Pay stays disabled until ticked is the intended behaviour (**note: the prototype does not yet wire `terms` into `payDisabled`; add it**).
+6. **Pay €120.00** button: full width, 50px, `#191B18`, radius 12px, bold white 15px. Disabled (opacity .4, `not-allowed`) when no method is selected, or when card is selected and its details are invalid.
+7. **Footer strip**: dark-blue `#0D314B` rounded box (radius 12px, padding 16px) with lock icon, "Secured by", white CM.com logo. Then the muted line "Design preview · No payment will be taken" (**prototype only, do not ship**).
+
+### Removed on purpose (do not implement)
+- No email/contact field, no "Contact / Log in" section, no newsletter sign-up checkbox. (`email`, `news`, `onEmail`, `toggleNews` still exist in the prototype state as dead code; ignore them.)
+
+### Order summary content (right column desktop / expandable bar mobile)
+Top to bottom: item row (64px merchant logo with quantity badge `2`, "General admission", "Amnesia Ibiza · 7 November 2026", €120.00); discount code / gift card input row with "Apply" button (visual only); **Date `7 November 2026, 14:32`**, **Order reference `AMN-2026-08421`**; divider; Subtotal (2 tickets) €120.00; Service fees "Included"; **Total** EUR €120.00 with "Includes €20.83 VAT"; two green-check benefit lines ("E-tickets sent instantly to your email", "All fees included, no surprises"). Date, order reference, total and beneficiary must always be visible on the payment page (Bancontact rule), so keep them in the summary. The "sent to your email" benefit line may need rewording now that no email is collected on this page.
+
+### Payment method rows (accordion behaviour)
+- **No method is selected by default.** All rows start collapsed. State `picked` (`''` initially).
+- Each row is a `button role="radio"` with `aria-checked`: 18px radio circle (selected = 6px dark border, unselected 1px `#C9CBC5`), method name (14px/600), and 1-3 logo chips on the right (40×28 px, radius 6px). Selected row background `#EDEDED`; hover `#F6F6F6`.
+- Clicking a row selects it and **expands its detail panel inline underneath** (background `#F7F7F7`, top border `#DEDEDE`, padding 14px); selecting another row collapses the previous one (single open at a time). Clicking the selected row again keeps it selected (prototype behaviour).
+- Order (13): Credit or debit card, Pay by bank, iDEAL, Wero, Bancontact, Klarna, Sofort, Riverty, Billink, EPS, Przelewy24, Multibanco, Paysafecard.
+- **Credit or debit card** (chips: Visa, Mastercard, Amex): the detail panel is the card form, **only rendered when the card row is selected**: Card number, Name on card, Expiry date (MM/YY), Security code. Validation and formatting exactly as in section 4 (Card form): brand detection, 4-4-4-4 / Amex 4-6-5, Luhn, expiry in the future, name digits stripped (max 26), CVC 3/4 digits (placeholder "3 digits"/"4 digits"), inline errors, per-keystroke handlers. There is **no live flip-card preview** in this layout (unlike `FramerCard`); the form is plain fields.
+- **All other methods**: the detail panel is a one-line description, no form. Copy in the source (`defs` object), including the Bancontact combined tagline. Methods that redirect (iDEAL, Klarna, Sofort, ...) start their flow on Pay. Pay by bank hands off to the pay-by-bank flow (`PayByBank*` boards).
+- Logo chips without an asset yet show a small "Logo" placeholder: Billink, EPS, Multibanco, Paysafecard.
+
+### State summary (prototype)
+`picked`, `terms`, `number`, `name`, `expiry`, `cvc`, `summaryOpen` (mobile only). Derived: `brand`, `numberOk`, `expiryOk`, `cardValid`, `payDisabled = !picked || (picked === 'card' && !cardValid) [|| !terms, to add]`.
+
+### Accessibility
+Labelled inputs, `role="radiogroup"` / `role="radio"` + `aria-checked`, `aria-expanded` on the mobile summary toggle, visible focus ring (2px `#1D1E1D`, offset 3px), `<aside aria-label="Order summary">`, headings h1 (merchant) → h2 (Payment). Keep.
+
+### Not designed yet for this layout
+Processing/loading state after Pay, success and failure screens (reuse the pay-by-bank result patterns and the shared receipt), the pay-by-bank bank-picker inside the accordion (currently the Pay-by-bank row only shows a description), Bancontact QR/card inside the accordion (the combined Bancontact screen is a separate board), error state for the terms checkbox, tablet widths.
 
 ## 3. Design tokens
 
@@ -105,6 +157,7 @@ Read exact values from the source files rather than this summary.
 4. Order-summary copy and amounts differ between merchants in the Main-family boards (`merchant` prop: home/coffee/furniture/outdoor); the split boards are hard-coded to Amnesia.
 5. The date/time is a static string; wire to the real order timestamp (locale-formatted) and add the beneficiary name to the Bancontact header.
 6. Accessibility already in the prototype: labelled inputs, `aria-pressed` on method buttons, visible focus rings, reduced-motion support. Keep them.
-7. Responsive: the split box wraps at narrow widths; only desktop (1440) boards were designed. Mobile views still need to be done.
+7. Responsive: the split box wraps at narrow widths; split boards and pay-by-bank boards are desktop (1440) only. The single scrolling pane has a mobile board (390).
+9. Single scrolling pane: `terms` is not yet part of `payDisabled`; Contact/email/newsletter were removed on purpose, so confirm how tickets are delivered (email still shown in a benefit line).
 
 8. A reference implementation of the split layout (card form with live card, Bancontact screen, Back button) exists in `../hosted-checkout-implementation/`.

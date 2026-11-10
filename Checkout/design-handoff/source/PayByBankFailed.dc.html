@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pay by bank, not completed</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#20221F;text-decoration:none}
+a:hover{text-decoration:underline;text-underline-offset:3px}
+a:focus-visible,button:focus-visible{outline:2px solid #20221F;outline-offset:3px;border-radius:4px}
+.fld{width:100%;height:48px;box-sizing:border-box;padding:0 14px;border:1px solid #E3E4DE;border-radius:10px;font:500 15px/1 Inter,system-ui,sans-serif;letter-spacing:-0.01em;color:#20221F;background:#FFFFFF;transition:border-color 150ms ease,box-shadow 150ms ease}
+.fld::placeholder{color:#9A9D95;opacity:1}
+.fld:hover{border-color:#CFD1CA}
+.fld:focus{outline:none;border-color:#20221F;box-shadow:0 0 0 3px rgba(32,34,31,0.1)}
+.bank{transition:border-color 150ms ease,box-shadow 150ms ease}
+.bank:hover{border-color:#CFD1CA}
+.cta{transition:filter 150ms ease}
+.cta:hover{filter:brightness(1.25);text-decoration:none}
+.blist{scrollbar-width:thin;scrollbar-color:#8A8D85 transparent}
+.blist::-webkit-scrollbar{width:6px}
+.blist::-webkit-scrollbar-track{background:transparent}
+.blist::-webkit-scrollbar-thumb{background:#8A8D85;border-radius:3px}
+@keyframes pulse{0%,100%{opacity:0.25}50%{opacity:1}}
+.pulse{animation:pulse 1.6s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){.pulse{animation:none}}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; padding: 48px 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; background: #F5F5EF; font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif; color: #20221F;">
+
+<main style="width: 100%; max-width: 1000px; min-height: 740px; box-sizing: border-box; display: flex; flex-direction: row; flex-wrap: wrap; background: #FFFFFF; border-radius: 20px; overflow: hidden; box-shadow: 0 2px 6px rgba(25,32,16,0.03), 0 20px 70px -16px rgba(25,32,16,0.16);">
+
+<section style="flex: 1 1 360px; min-width: 0; box-sizing: border-box; padding: 40px 32px 32px; display: flex; flex-direction: column; gap: 28px; background: #F4F4F4;">
+<a href="https://amnesia.es" aria-label="Back to Amnesia Ibiza" title="Placeholder: production uses the merchant return/cancel URL" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; letter-spacing: -0.02em; color: #666666; margin: -8px 0 -12px;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+<span>Back</span>
+</a>
+<div style="display: flex; flex-direction: row; align-items: center; gap: 20px;">
+<div role="img" aria-label="Amnesia Ibiza logo" style="width: 88px; height: 88px; flex-shrink: 0; border-radius: 16px; overflow: hidden; display: flex;">
+<img src="/_blob/c8d3ff6fefd82a9616a8559251a0c48e" alt="" style="width: 88px; height: 88px; object-fit: cover; display: block;">
+</div>
+<div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+<h1 style="margin: 0; font-size: 26px; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em;">Amnesia Ibiza</h1>
+<span style="font-size: 13px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #666666;">amnesia.es</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px;">
+<h2 style="margin: 0; font-size: 24px; line-height: 1.4; font-weight: 600; letter-spacing: -0.02em;">Complete your payment</h2>
+<div style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #666666;">
+<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px;"><span>Date</span><span>7 November 2026, 14:32</span></div>
+<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px;"><span>Order reference</span><span>AMN-2026-08421</span></div>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; flex-direction: row; align-items: baseline; gap: 10px;">
+<span style="font-size: 40px; line-height: 1.4; font-weight: 600; letter-spacing: -0.04em;">€120.00</span>
+<span style="font-size: 13px; font-weight: 500; letter-spacing: -0.02em; color: #666666;">EUR</span>
+</div>
+<span style="font-size: 13px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #666666;">2 × General admission · All fees included</span>
+</div>
+</section>
+
+<section style="flex: 1 1 480px; min-width: 0; box-sizing: border-box; border-left: 1px solid #ECEDE7; display: flex; flex-direction: column;">
+<div style="flex-grow: 1; box-sizing: border-box; padding: 32px 32px 24px; display: flex; flex-direction: column; gap: 16px;">
+
+<div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 18px;">
+<div style="width: 64px; height: 64px; border-radius: 32px; background: #FEF3F2; border: 1.5px solid #FDA29B; display: flex; align-items: center; justify-content: center; color: #B42318;"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v5M12 16.5v.5"></path><circle cx="12" cy="12" r="9.5"></circle></svg></div>
+<div role="alert" style="display: flex; flex-direction: column; gap: 8px; max-width: 380px;">
+<h3 style="margin: 0; font-size: 22px; line-height: 1.3; font-weight: 700; letter-spacing: -0.02em;">{{title}}</h3>
+<p style="margin: 0; font-size: 14px; line-height: 1.5; font-weight: 500; letter-spacing: -0.02em; color: #555850;">{{body}}</p>
+</div>
+<div style="width: 100%; box-sizing: border-box; padding: 12px 16px; border-radius: 10px; background: #F5F5EF; display: flex; flex-direction: row; align-items: center; gap: 10px; text-align: left; font-size: 13px; font-weight: 500; letter-spacing: -0.02em; color: #3A3C37;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1F7A4D" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+<span>No money has left your account.</span>
+</div>
+<div style="width: 100%; display: flex; flex-direction: column; gap: 10px;">
+<a class="cta" href="PayByBankAuth.dc.html" style="height: 48px; box-sizing: border-box; border-radius: 10px; padding: 0 20px; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; text-decoration: none; background: #20221F; color: #FFFFFF;"><span>Try again with ING Bank</span></a>
+<a href="PayByBank.dc.html" style="height: 48px; box-sizing: border-box; border-radius: 10px; padding: 0 20px; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; text-decoration: none; background: #FFFFFF; color: #20221F; border: 1px solid #E3E4DE;"><span>Choose another bank</span></a>
+</div>
+</div>
+
+<div style="box-sizing: border-box; padding: 10px 14px; border-radius: 10px; border: 1px dashed #D1D5DB; background: #F9FAFB; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 12px; font-weight: 500; color: #6B7280;">
+<span style="font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: 11px;">Prototype: reason</span>
+<sc-for list="{{reasons}}" as="r" hint-placeholder-count="3">
+<button type="button" aria-pressed="{{r.active}}" onClick="{{r.pick}}" style="padding: 3px 10px; border-radius: 999px; border: 1px solid {{r.border}}; background: {{r.bg}}; color: {{r.fg}}; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;">{{r.label}}</button>
+</sc-for>
+</div>
+
+</div>
+<div style="box-sizing: border-box; padding: 0 32px 16px; font-size: 11px; line-height: 1.5; font-weight: 500; letter-spacing: -0.01em; color: #797C74;">CM Payments B.V. is authorised and supervised by De Nederlandsche Bank (DNB) as a licensed Payment Institution (Relation: R129862). We never see, store or ask for your bank login credentials or PIN.</div>
+<footer style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 18px 32px; background: #0D314B; color: #FFFFFF; font-size: 14px; font-weight: 500; letter-spacing: -0.01em;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2.5"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+<span>Secured by</span>
+<img src="/_blob/1dff062cf3570eb6f7af1af8b565411f" alt="CM.com" style="height: 18px; width: auto;">
+</footer>
+</section>
+
+</main>
+
+<span style="font-size: 12px; font-weight: 500; letter-spacing: -0.02em; color: #797C74;">Design preview · No payment will be taken</span>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { reason: 'expired' };
+  }
+  renderVals() {
+    const content = {
+      expired: {
+        label: 'Request expired',
+        title: 'Your bank request expired',
+        body: "We didn't receive your approval from ING Bank within 15 minutes, so the payment request was closed."
+      },
+      declined: {
+        label: 'Bank declined',
+        title: 'Your bank declined the payment',
+        body: "ING Bank didn't approve this transfer. This can happen when a limit is reached or the request is rejected in the banking app."
+      },
+      cancelled: {
+        label: 'Cancelled',
+        title: 'You cancelled the payment',
+        body: 'The payment was cancelled in your banking app. You can try again or choose another bank.'
+      }
+    };
+    const cur = content[this.state.reason];
+    const reasons = Object.keys(content).map((id) => {
+      const active = this.state.reason === id;
+      return { label: content[id].label, active, bg: active ? '#20221F' : '#FFFFFF', fg: active ? '#FFFFFF' : '#6B7280', border: active ? '#20221F' : '#D1D5DB', pick: () => this.setState({ reason: id }) };
+    });
+    return { title: cur.title, body: cur.body, reasons };
+  }
+}
+</script>
+</body>
+</html>

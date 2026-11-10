@@ -10,6 +10,15 @@
       "x": 0,
       "y": 0
     },
+    "Bancontact.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Checkout — Bancontact (QR + card)",
+      "w": 1440,
+      "x": 6080,
+      "y": 2788
+    },
     "Card.dc.html": {
       "expand": "fill",
       "h": 1000,
@@ -27,6 +36,24 @@
       "w": 1440,
       "x": 3040,
       "y": 2788
+    },
+    "FramerCard.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Checkout — split layout, card details",
+      "w": 1440,
+      "x": 4560,
+      "y": 2788
+    },
+    "FramerList.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Checkout — split layout, 1-wide method list",
+      "w": 1440,
+      "x": 3040,
+      "y": 4182
     },
     "Grid.dc.html": {
       "expand": "fill",
@@ -46,6 +73,42 @@
       "x": 0,
       "y": 0
     },
+    "PayByBank.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Pay by bank — choose your bank",
+      "w": 1440,
+      "x": 4560,
+      "y": 4182
+    },
+    "PayByBankAuth.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Pay by bank — authorise (desktop QR)",
+      "w": 1440,
+      "x": 6080,
+      "y": 4182
+    },
+    "PayByBankFailed.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Pay by bank — not completed (expired / declined / cancelled)",
+      "w": 1440,
+      "x": 9120,
+      "y": 4182
+    },
+    "PayByBankSuccess.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Pay by bank — payment confirmed",
+      "w": 1440,
+      "x": 7600,
+      "y": 4182
+    },
     "Scroll.dc.html": {
       "expand": "fill",
       "h": 1000,
@@ -55,31 +118,31 @@
       "x": 3040,
       "y": 0
     },
-    "FramerCard.dc.html": {
+    "SinglePane.dc.html": {
       "expand": "fill",
       "h": 1000,
       "is_interactive": true,
-      "title": "Checkout — split layout, card details",
-      "w": 1440,
-      "x": 4560,
-      "y": 2788
-    },
-    "Bancontact.dc.html": {
-      "expand": "fill",
-      "h": 1000,
-      "is_interactive": true,
-      "title": "Checkout — Bancontact (QR + card)",
-      "w": 1440,
-      "x": 6080,
-      "y": 2788
-    },
-    "FramerList.dc.html": {
-      "expand": "fill",
-      "h": 1000,
-      "is_interactive": true,
-      "title": "Checkout — split layout, 1-wide method list",
+      "title": "Checkout — single scrolling pane (desktop)",
       "w": 1440,
       "x": 3040,
+      "y": 5576
+    },
+    "SinglePaneMobile.dc.html": {
+      "expand": "fill",
+      "h": 844,
+      "is_interactive": true,
+      "title": "Checkout — single scrolling pane (mobile)",
+      "w": 390,
+      "x": 4560,
+      "y": 5576
+    },
+    "FramerMore.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Checkout — split layout, 'More payment methods' expander",
+      "w": 1440,
+      "x": 1520,
       "y": 4182
     }
   },
@@ -99,7 +162,17 @@
   "launch": {
     "view": "canvas"
   },
-  "notes": {},
+  "notes": {
+    "image-mazcbe": {
+      "alt": "Screenshot 2026-11-10 at 08.53.40",
+      "h": 448,
+      "kind": "image",
+      "src": "/_blob/0442db8a390bbbd82f303a0fd47fb47f",
+      "w": 447,
+      "x": 4008,
+      "y": 5205
+    }
+  },
   "order": [
     "Artboard-lvda.dc.html",
     "Main.dc.html",
@@ -108,8 +181,15 @@
     "Grid.dc.html",
     "Framer.dc.html",
     "FramerList.dc.html",
+    "FramerMore.dc.html",
     "FramerCard.dc.html",
-    "Bancontact.dc.html"
+    "Bancontact.dc.html",
+    "PayByBank.dc.html",
+    "PayByBankAuth.dc.html",
+    "PayByBankSuccess.dc.html",
+    "PayByBankFailed.dc.html",
+    "SinglePane.dc.html",
+    "SinglePaneMobile.dc.html"
   ],
   "pages": [
     {
