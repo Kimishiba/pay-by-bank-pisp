@@ -1,6 +1,8 @@
 name: Deploy Pay by Bank Gateway to Unraid
 
 on:
+  release:
+    types: [published]
   push:
     branches:
       - main
