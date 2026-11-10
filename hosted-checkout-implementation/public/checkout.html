@@ -26,9 +26,23 @@ a:focus-visible,button:focus-visible{outline:2px solid #1D1E1D;outline-offset:3p
 .mobile-summary-bar {
   display: none;
 }
+.mobile-tx-details {
+  display: none !important;
+}
 @media (max-width: 999px) {
   .mobile-summary-bar {
     display: block;
+  }
+  .mobile-tx-details {
+    display: flex !important;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    background: #F8F9F8;
+    border: 1px solid #E6E8E3;
+    border-radius: 14px;
+    margin-top: -6px;
+    margin-bottom: 4px;
   }
   .order-summary-aside {
     display: none !important;
@@ -121,6 +135,24 @@ a:focus-visible,button:focus-visible{outline:2px solid #1D1E1D;outline-offset:3p
 <div style="display: flex; flex-direction: row; align-items: center; gap: 12px;">
 <div role="img" aria-label="Amnesia Ibiza logo" style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px; overflow: hidden; display: flex;"><img src="assets/merchant-amnesia-ibiza.png" alt="" style="width: 44px; height: 44px; object-fit: cover; display: block;"></div>
 <div style="display: flex; flex-direction: column; gap: 1px;"><h1 style="margin: 0; font-size: 18px; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em;">Amnesia Ibiza</h1><span style="font-size: 12px; font-weight: 500; letter-spacing: -0.02em; color: #666666;">amnesia.es</span></div>
+</div>
+
+<!-- Mobile Transaction Details directly under Merchant Name -->
+<div class="mobile-tx-details">
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 1.3; font-weight: 600; letter-spacing: -0.02em; color: #20221F;">Complete your payment</h2>
+<div style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #666666;">
+<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px;"><span>Date</span><span style="color: #20221F; font-weight: 600;">7 November 2026, 14:32</span></div>
+<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px;"><span>Order reference</span><span style="color: #20221F; font-weight: 600; font-family: ui-monospace, Menlo, monospace;">AMN-2026-08421</span></div>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<div style="display: flex; flex-direction: row; align-items: baseline; gap: 8px;">
+<span style="font-size: 32px; line-height: 1.2; font-weight: 700; letter-spacing: -0.04em; color: #20221F;">€120.00</span>
+<span style="font-size: 13px; font-weight: 500; letter-spacing: -0.02em; color: #666666;">EUR</span>
+</div>
+<span style="font-size: 13px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; color: #666666;">2 × General admission · All fees included</span>
+</div>
 </div>
 
 <div style="display: flex; flex-direction: column; gap: 12px; align-items: stretch;">
