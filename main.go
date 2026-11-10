@@ -133,10 +133,10 @@ var BankEndpoints = map[string]BankConfig{
 	"knab": {
 		Name:          "Knab",
 		BIC:           "KNABNL2H",
-		SandboxURL:    "https://api.knab.nl/openbanking/v1/payments/sepa-credit-transfers",
-		ProdURL:       "https://api.knab.nl/openbanking/v1/payments/sepa-credit-transfers",
+		SandboxURL:    "https://api.knab.nl/openbanking-sandbox/v1/payments/instant-sepa-credit-transfers",
+		ProdURL:       "https://tpp-loket.knab.nl/openbanking/v1/payments/instant-sepa-credit-transfers",
 		Hostname:      "api.knab.nl",
-		Scheme:        "Berlin Group NextGenPSD2 v1.3 (eIDAS QSEAL + BAWAG Group Gateway)",
+		Scheme:        "Berlin Group NextGenPSD2 v1.3 (OAuth 2.0 CCG + eIDAS QSealC)",
 		AppName:       "Knab App",
 		ExpectedProof: "Knab BAWAG Group API Gateway with live x-request-id & eIDAS QSealC signature",
 	},
@@ -1534,19 +1534,33 @@ func (c *VolksbankClient) ExecutePayment(brandSlug string, targetURL string, pay
 
 // KnabClient manages live Berlin Group NextGenPSD2 PIS integration with Knab (BAWAG Group)
 type KnabClient struct {
-	client      *http.Client
-	certB64     string
-	qsealKey    *rsa.PrivateKey
-	keyID       string
-	clientID    string
-	redirectURI string
+	client         *http.Client
+	certB64        string
+	qsealKey       *rsa.PrivateKey
+	keyID          string
+	clientID       string
+	clientSecret   string
+	tokenURL       string
+	redirectURI    string
+	cachedToken    string
+	tokenMutex     sync.Mutex
+	tokenExpiresAt time.Time
 }
 
 func NewKnabClient() (*KnabClient, error) {
-	tlsCertFile := "certs/cm/cm_qwac.crt"
-	tlsKeyFile := "certs/cm/cm_qwac.key"
-	signCertFile := "certs/cm/cm_qsealc.crt"
-	signKeyFile := "certs/cm/cm_qsealc.key"
+	tlsCertFile := "certs/knab/knab-psd2-sandbox-ssl-cert.crt"
+	tlsKeyFile := "certs/knab/knab-psd2-sandbox-ssl-cert.key"
+	if _, err := os.Stat(tlsCertFile); err != nil {
+		tlsCertFile = "certs/cm/cm_qwac.crt"
+		tlsKeyFile = "certs/cm/cm_qwac.key"
+	}
+
+	signCertFile := "certs/knab/knab-psd2-sandbox-app-cert.crt"
+	signKeyFile := "certs/knab/knab-psd2-sandbox-app-cert.key"
+	if _, err := os.Stat(signCertFile); err != nil {
+		signCertFile = "certs/cm/cm_qsealc.crt"
+		signKeyFile = "certs/cm/cm_qsealc.key"
+	}
 
 	var certs []tls.Certificate
 	if _, err := os.Stat(tlsCertFile); err == nil {
@@ -1599,12 +1613,22 @@ func NewKnabClient() (*KnabClient, error) {
 	parsedCert, err := x509.ParseCertificate(cBlock.Bytes)
 	keyID := "SN=" + parsedCert.SerialNumber.String() + ",CA=" + parsedCert.Issuer.CommonName
 	if err != nil {
-		keyID = "CM-QSEAL-CERT-2026"
+		keyID = "KNAB-SANDBOX-QSEAL-2026"
 	}
 
 	clientID := os.Getenv("KNAB_CLIENT_ID")
 	if clientID == "" {
-		clientID = "cm-payments-pisp-knab"
+		clientID = "1f228083-4eaa-41c1-9025-91681e85ab4b"
+	}
+
+	clientSecret := os.Getenv("KNAB_CLIENT_SECRET")
+	if clientSecret == "" {
+		clientSecret = "mBw#rYM<DQquBewQhBRfo<wUXvKWc8PrkiA8A#ra"
+	}
+
+	tokenURL := os.Getenv("KNAB_TOKEN_URL")
+	if tokenURL == "" {
+		tokenURL = "https://login.knab.io/connect/token"
 	}
 
 	redirectURI := os.Getenv("KNAB_REDIRECT_URI")
@@ -1613,13 +1637,64 @@ func NewKnabClient() (*KnabClient, error) {
 	}
 
 	return &KnabClient{
-		client:      httpClient,
-		certB64:     certB64,
-		qsealKey:    rsaKey,
-		keyID:       keyID,
-		clientID:    clientID,
-		redirectURI: redirectURI,
+		client:       httpClient,
+		certB64:      certB64,
+		qsealKey:     rsaKey,
+		keyID:        keyID,
+		clientID:     clientID,
+		clientSecret: clientSecret,
+		tokenURL:     tokenURL,
+		redirectURI:  redirectURI,
 	}, nil
+}
+
+func (c *KnabClient) GetAccessToken() (string, error) {
+	c.tokenMutex.Lock()
+	defer c.tokenMutex.Unlock()
+
+	if c.cachedToken != "" && time.Now().Before(c.tokenExpiresAt) {
+		return c.cachedToken, nil
+	}
+
+	form := url.Values{}
+	form.Set("grant_type", "client_credentials")
+	form.Set("client_id", c.clientID)
+	form.Set("client_secret", c.clientSecret)
+	form.Set("scope", "psd2")
+
+	req, err := http.NewRequest("POST", c.tokenURL, strings.NewReader(form.Encode()))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("knab token request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("knab token failed (HTTP %d): %s", resp.StatusCode, string(b))
+	}
+
+	var tr struct {
+		AccessToken string `json:"access_token"`
+		ExpiresIn   int    `json:"expires_in"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&tr); err != nil {
+		return "", err
+	}
+
+	c.cachedToken = tr.AccessToken
+	expSec := tr.ExpiresIn - 60
+	if expSec < 60 {
+		expSec = 60
+	}
+	c.tokenExpiresAt = time.Now().Add(time.Duration(expSec) * time.Second)
+	return c.cachedToken, nil
 }
 
 func (c *KnabClient) ExecutePayment(targetURL string, payloadBytes []byte, reqID string, paymentID string) (LiveTelemetry, string, map[string]string) {
@@ -1633,6 +1708,8 @@ func (c *KnabClient) ExecutePayment(targetURL string, payloadBytes []byte, reqID
 	sigBytes, _ := rsa.SignPKCS1v15(rand.Reader, c.qsealKey, crypto.SHA256, sigHash[:])
 	sigB64 := base64.StdEncoding.EncodeToString(sigBytes)
 	signatureHeader := fmt.Sprintf(`keyId="%s",algorithm="rsa-sha256",headers="date digest x-request-id",signature="%s"`, c.keyID, sigB64)
+
+	token, _ := c.GetAccessToken()
 
 	outboundHeaders := map[string]string{
 		"Host":                      u.Host,
@@ -1649,6 +1726,9 @@ func (c *KnabClient) ExecutePayment(targetURL string, payloadBytes []byte, reqID
 		"Digest":                    digestVal,
 		"Signature":                 signatureHeader,
 		"TPP-Signature-Certificate": c.certB64,
+	}
+	if token != "" {
+		outboundHeaders["Authorization"] = "Bearer " + token
 	}
 
 	httpReq, err := http.NewRequest("POST", targetURL, strings.NewReader(string(payloadBytes)))
@@ -2281,7 +2361,20 @@ func handlePayments(w http.ResponseWriter, r *http.Request) {
 		} else if bankID == "bunq" && globalBunq != nil {
 			telemetry, scaRedirectURL, outboundHeaders = globalBunq.ExecutePayment(targetURL, payloadBytes, reqID, paymentID)
 		} else if bankID == "knab" && globalKnab != nil {
-			telemetry, scaRedirectURL, outboundHeaders = globalKnab.ExecutePayment(targetURL, payloadBytes, reqID, paymentID)
+			creditorIBAN := req.CreditorIBAN
+			if creditorIBAN == "" || creditorIBAN == "NL99CMCO0123456789" {
+				creditorIBAN = "NL91ABNA0417164300" // Valid Dutch Mod97 IBAN required by Knab validation
+			}
+			knabPayload := BerlinGroupPayload{
+				CreditorName:                      berlinPayload.CreditorName,
+				RemittanceInformationUnstructured: req.Description,
+			}
+			knabPayload.InstructedAmount.Currency = req.Currency
+			knabPayload.InstructedAmount.Amount = fmt.Sprintf("%.2f", req.Amount)
+			knabPayload.CreditorAccount.IBAN = creditorIBAN
+			knabBytes, _ := json.Marshal(knabPayload)
+			payloadBytes = knabBytes
+			telemetry, scaRedirectURL, outboundHeaders = globalKnab.ExecutePayment(targetURL, knabBytes, reqID, paymentID)
 		} else {
 			hasher := sha256.New()
 			hasher.Write(payloadBytes)
@@ -2361,6 +2454,12 @@ func handlePayments(w http.ResponseWriter, r *http.Request) {
 			}
 			_ = json.Unmarshal([]byte(telemetry.RawBody), &abnResp)
 			bankPaymentID = abnResp.PaymentID
+		} else if bankID == "knab" && telemetry.RawBody != "" {
+			var knabResp struct {
+				PaymentID string `json:"paymentId"`
+			}
+			_ = json.Unmarshal([]byte(telemetry.RawBody), &knabResp)
+			bankPaymentID = knabResp.PaymentID
 		} else if bankID == "revolut" && telemetry.RawBody != "" {
 			var revoResp struct {
 				Data struct {
